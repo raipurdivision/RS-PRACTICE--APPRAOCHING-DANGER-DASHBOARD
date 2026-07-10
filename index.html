@@ -1,0 +1,3101 @@
+
+
+
+
+
+
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Railway Board Drive — Counselling Dashboard</title>
+<style>
+  :root {
+    --bg: #0b0f14;
+    --panel: #11161d;
+    --panel-2: #161d26;
+    --line: #232c38;
+    --text: #e7edf3;
+    --muted: #8694a3;
+    --signal-red: #e0413f;
+    --signal-yellow: #f0b429;
+    --signal-green: #2bb673;
+    --amber: #f0b429;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Segoe UI', Arial, sans-serif; }
+
+  .topbar {
+    background: linear-gradient(180deg, #0f1620, #0b0f14);
+    border-bottom: 3px solid var(--signal-yellow);
+    padding: 22px 28px 18px;
+  }
+  .topbar .eyebrow { font-family: 'Courier New', monospace; letter-spacing: 3px; font-size: 11px; color: var(--signal-yellow); text-transform: uppercase; margin-bottom: 6px; }
+  .topbar h1 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: 0.5px; }
+  .topbar .sub { color: var(--muted); font-size: 13px; margin-top: 4px; }
+
+  .signal-dots { display: inline-flex; gap: 6px; vertical-align: middle; margin-right: 10px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+  .dot.red    { background: var(--signal-red);    box-shadow: 0 0 6px var(--signal-red); }
+  .dot.yellow { background: var(--signal-yellow); box-shadow: 0 0 6px var(--signal-yellow); }
+  .dot.green  { background: var(--signal-green);  box-shadow: 0 0 6px var(--signal-green); }
+
+  .wrap { padding: 22px 28px 50px; max-width: 1400px; margin: 0 auto; }
+
+  /* ── Filter Bar ── */
+  .filter-bar {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin-bottom: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .filter-row {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  .filter-row + .filter-row {
+    padding-top: 14px;
+    border-top: 1px solid var(--line);
+  }
+  .filter-group { display: flex; align-items: center; gap: 10px; }
+  .filter-group label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); white-space: nowrap; }
+
+  .styled-select {
+    background: var(--panel-2);
+    border: 1px solid var(--signal-yellow);
+    color: var(--text);
+    padding: 9px 36px 9px 14px;
+    border-radius: 7px;
+    font-size: 13px;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    cursor: pointer;
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23f0b429' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    min-width: 240px;
+  }
+  .styled-select:focus { border-color: var(--signal-green); }
+  .styled-select option { background: #161d26; color: var(--text); }
+
+  /* LP filter gets green accent */
+  #lpFilter { border-color: #4d8fd6; }
+  #lpFilter:focus { border-color: var(--signal-green); }
+  #cliFilter { border-color: #9b59b6; }
+  #cliFilter:focus { border-color: var(--signal-green); }
+
+  .divider { width: 1px; height: 32px; background: var(--line); }
+
+  .refresh-btn {
+    background: var(--panel-2); border: 1px solid var(--line);
+    color: var(--text); padding: 8px 16px; border-radius: 6px;
+    cursor: pointer; font-size: 12.5px; white-space: nowrap;
+  }
+  .refresh-btn:hover { border-color: var(--signal-yellow); color: var(--signal-yellow); }
+
+  .clear-btn {
+    background: transparent; border: 1px solid var(--line);
+    color: var(--muted); padding: 8px 14px; border-radius: 6px;
+    cursor: pointer; font-size: 12px; white-space: nowrap;
+  }
+  .clear-btn:hover { border-color: var(--signal-red); color: var(--signal-red); }
+
+  /* ── Date picker inputs ── */
+  .date-input {
+    background: var(--panel-2);
+    border: 1px solid #2ecc71;
+    color: var(--text);
+    padding: 8px 12px;
+    border-radius: 7px;
+    font-size: 13px;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    cursor: pointer;
+    outline: none;
+    width: 148px;
+  }
+  .date-input:focus { border-color: var(--signal-green); box-shadow: 0 0 0 2px rgba(43,182,115,0.15); }
+  .date-input::-webkit-calendar-picker-indicator { filter: invert(0.7) sepia(1) saturate(3) hue-rotate(90deg); cursor: pointer; }
+  .date-range-badge {
+    display: none;
+    background: #0d2b1e;
+    border: 1px solid var(--signal-green);
+    color: #a7f0c8;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-family: 'Courier New', monospace;
+    white-space: nowrap;
+  }
+  .date-range-badge.show { display: inline-block; }
+
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+  .status-dot.live { background: var(--signal-green); box-shadow: 0 0 6px var(--signal-green); animation: pulse 1.5s infinite; }
+  .status-dot.err  { background: var(--signal-red); }
+  .status-dot.wait { background: var(--signal-yellow); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  /* ── Person filter active banner ── */
+  .person-banner {
+    display: none;
+    background: #0d1e30;
+    border: 1px solid #4d8fd6;
+    border-radius: 8px;
+    padding: 12px 18px;
+    margin-bottom: 16px;
+    font-size: 13px;
+    color: #a8d4f5;
+    align-items: center;
+    gap: 12px;
+  }
+  .person-banner.show { display: flex; }
+  .person-banner strong { color: #fff; font-size: 15px; }
+  .person-badge {
+    background: #4d8fd6; color: #fff;
+    padding: 2px 10px; border-radius: 12px;
+    font-size: 11px; font-weight: bold; letter-spacing: 0.5px;
+  }
+
+  /* ── Stat Cards ── */
+  .stat-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 26px; }
+  .stat-card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; position: relative; overflow: hidden; }
+  .stat-card::before { content:''; position:absolute; left:0; top:0; bottom:0; width:4px; }
+  .stat-card.red::before    { background: var(--signal-red); }
+  .stat-card.yellow::before { background: var(--signal-yellow); }
+  .stat-card.green::before  { background: var(--signal-green); }
+  .stat-card.blue::before   { background: #4d8fd6; }
+  .stat-label { font-size:11px; text-transform:uppercase; letter-spacing:1.5px; color:var(--muted); margin-bottom:8px; }
+  .stat-value { font-size:30px; font-weight:700; font-family:'Courier New',monospace; }
+  .stat-sub   { font-size:10px; color:var(--muted); margin-top:4px; font-family:'Courier New',monospace; }
+
+  /* ── Tables ── */
+  .panel-title { display:flex; align-items:center; justify-content:space-between; margin: 28px 0 10px; }
+  .panel-title h2 { font-size:16px; margin:0; letter-spacing:.5px; }
+  .count-chip { background:var(--panel-2); border:1px solid var(--line); padding:4px 12px; border-radius:20px; font-size:12px; color:var(--muted); font-family:'Courier New',monospace; }
+
+  .table-scroll { background:var(--panel); border:1px solid var(--line); border-radius:10px; overflow-x:auto; max-height:460px; overflow-y:auto; }
+  table { width:100%; border-collapse:collapse; font-size:12.5px; white-space:nowrap; }
+  thead th { position:sticky; top:0; background:var(--panel-2); color:var(--amber); text-transform:uppercase; font-size:10.5px; letter-spacing:1px; text-align:left; padding:10px 14px; border-bottom:2px solid var(--line); }
+  tbody td { padding:9px 14px; border-bottom:1px solid var(--line); color:#d2dae3; }
+  tbody tr:hover { background:#151c25; }
+  tbody tr:nth-child(even) { background:#0e1319; }
+  tbody tr:nth-child(even):hover { background:#151c25; }
+  td.highlight { color: #fff; background: #0d1e30 !important; font-weight: 600; }
+
+  .empty-state { padding:40px; text-align:center; color:var(--muted); font-size:13px; }
+  .loading { padding:40px; text-align:center; color:var(--muted); font-family:'Courier New',monospace; font-size:13px; }
+
+  .error-box { background:#2a1414; border:1px solid var(--signal-red); color:#ffb3b0; padding:14px 18px; border-radius:8px; font-size:13px; margin-bottom:20px; line-height:1.7; }
+  .success-box { background:#0d2b1e; border:1px solid var(--signal-green); color:#a7f0c8; padding:10px 16px; border-radius:8px; font-size:12.5px; margin-bottom:16px; font-family:'Courier New',monospace; }
+
+  .section-block { display:none; }
+  .section-block.visible { display:block; }
+
+  .footer-note { text-align:center; color:var(--muted); font-size:11.5px; margin-top:36px; font-family:'Courier New',monospace; }
+
+  /* ── Tab Bar ── */
+  .tab-bar {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid var(--line);
+    padding-bottom: 0;
+  }
+  .tab-btn {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-bottom: none;
+    color: var(--muted);
+    padding: 10px 22px;
+    border-radius: 7px 7px 0 0;
+    font-size: 12.5px;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: background 0.15s, color 0.15s;
+    position: relative;
+    bottom: -2px;
+  }
+  .tab-btn:hover { background: var(--panel-2); color: var(--text); }
+  .tab-btn.active {
+    background: var(--panel-2);
+    border-color: var(--signal-yellow);
+    color: var(--signal-yellow);
+    border-bottom: 2px solid var(--panel-2);
+  }
+  .tab-btn.cli-tab.active { border-color: #9b59b6; color: #c77dff; border-bottom-color: var(--panel-2); }
+  .tab-btn.lp-tab.active  { border-color: #2ecc71; color: #2ecc71; border-bottom-color: var(--panel-2); }
+
+  /* ── LP/ALP Wise Report ── */
+  .lp-report-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 18px; flex-wrap: wrap; gap: 10px;
+  }
+  .lp-report-header h2 { margin: 0; font-size: 17px; color: #2ecc71; letter-spacing: 0.5px; }
+  .lp-report-meta { font-size: 12px; color: var(--muted); font-family: 'Courier New', monospace; }
+
+  .lp-report-table-wrap {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow-x: auto;
+    margin-bottom: 30px;
+  }
+  .lp-report-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .lp-report-table thead th {
+    position: sticky; top: 0;
+    background: #0d2b1e;
+    color: #2ecc71;
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-align: left;
+    padding: 11px 16px;
+    border-bottom: 2px solid #1a5c3a;
+    white-space: nowrap;
+  }
+  .lp-report-table thead th.num { text-align: center; }
+  .lp-report-table tbody td { padding: 10px 16px; border-bottom: 1px solid var(--line); color: #d2dae3; }
+  .lp-report-table tbody tr:hover { background: #151c25; }
+  .lp-report-table tbody tr:nth-child(even) { background: #0e1319; }
+  .lp-report-table tbody tr:nth-child(even):hover { background: #151c25; }
+  .lp-report-table .sno { color: var(--muted); text-align: center; font-family: 'Courier New', monospace; font-size: 12px; }
+  .lp-report-table .crew-name { color: #fff; font-weight: 600; }
+  .lp-report-table .role-badge {
+    display: inline-block;
+    padding: 2px 8px; border-radius: 10px;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.5px;
+  }
+  .lp-report-table .role-badge.LP  { background: #1a3a5c; color: #4d8fd6; }
+  .lp-report-table .role-badge.ALP { background: #1a3a2a; color: #2ecc71; }
+  .lp-report-table .ds-count { color: var(--signal-red);    font-weight: 700; font-family: 'Courier New', monospace; font-size: 15px; text-align: center; }
+  .lp-report-table .rs-count { color: var(--signal-green);  font-weight: 700; font-family: 'Courier New', monospace; font-size: 15px; text-align: center; }
+  .lp-report-table .total-count { color: var(--signal-yellow); font-weight: 700; font-family: 'Courier New', monospace; font-size: 15px; text-align: center; }
+  .lp-report-table .bar-cell { min-width: 160px; padding: 10px 16px; }
+
+  .lp-grand-total {
+    background: #0d2b1e !important;
+    border-top: 2px solid #1a5c3a;
+    font-weight: 700;
+  }
+  .lp-grand-total td { color: var(--signal-yellow) !important; font-size: 13px; }
+
+  .lp-pdf-btn {
+    background: #0d2b1e; border: 1px solid #2ecc71;
+    color: #2ecc71; padding: 9px 18px; border-radius: 6px;
+    cursor: pointer; font-size: 12.5px; white-space: nowrap;
+    font-family: 'Segoe UI', Arial, sans-serif;
+  }
+  .lp-pdf-btn:hover { background: #1a5c3a; }
+
+  .lp-role-filter {
+    display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; align-items: center;
+  }
+  .lp-role-filter label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-right: 4px; }
+  .role-chip {
+    padding: 5px 14px; border-radius: 20px; border: 1px solid var(--line);
+    font-size: 12px; cursor: pointer; background: var(--panel-2); color: var(--muted);
+    transition: all 0.15s;
+  }
+  .role-chip.active-all   { border-color: var(--signal-yellow); color: var(--signal-yellow); background: #1a160a; }
+  .role-chip.active-lp    { border-color: #4d8fd6; color: #4d8fd6; background: #0d1e30; }
+  .role-chip.active-alp   { border-color: #2ecc71; color: #2ecc71; background: #0d2b1e; }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* ── CLI Wise Report ── */
+  .cli-report-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 18px; flex-wrap: wrap; gap: 10px;
+  }
+  .cli-report-header h2 { margin: 0; font-size: 17px; color: #c77dff; letter-spacing: 0.5px; }
+  .cli-report-meta { font-size: 12px; color: var(--muted); font-family: 'Courier New', monospace; }
+
+  .cli-report-table-wrap {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow-x: auto;
+    margin-bottom: 30px;
+  }
+  .cli-report-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .cli-report-table thead th {
+    position: sticky; top: 0;
+    background: #1a1030;
+    color: #c77dff;
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-align: left;
+    padding: 11px 16px;
+    border-bottom: 2px solid #4a2060;
+    white-space: nowrap;
+  }
+  .cli-report-table thead th.num { text-align: center; }
+  .cli-report-table tbody td { padding: 10px 16px; border-bottom: 1px solid var(--line); color: #d2dae3; }
+  .cli-report-table tbody tr:hover { background: #151c25; }
+  .cli-report-table tbody tr:nth-child(even) { background: #0e1319; }
+  .cli-report-table tbody tr:nth-child(even):hover { background: #151c25; }
+  .cli-report-table .sno { color: var(--muted); text-align: center; font-family: 'Courier New', monospace; font-size: 12px; }
+  .cli-report-table .cli-name { color: #fff; font-weight: 600; }
+  .cli-report-table .ds-count { color: var(--signal-red); font-weight: 700; font-family: 'Courier New', monospace; font-size: 15px; text-align: center; }
+  .cli-report-table .rs-count { color: var(--signal-green); font-weight: 700; font-family: 'Courier New', monospace; font-size: 15px; text-align: center; }
+  .cli-report-table .total-count { color: var(--signal-yellow); font-weight: 700; font-family: 'Courier New', monospace; font-size: 15px; text-align: center; }
+  .cli-report-table .bar-cell { min-width: 160px; padding: 10px 16px; }
+  .cli-bar-wrap { display: flex; gap: 3px; height: 14px; border-radius: 4px; overflow: hidden; background: var(--line); }
+  .cli-bar-ds { background: var(--signal-red); height: 100%; transition: width 0.3s; }
+  .cli-bar-rs { background: var(--signal-green); height: 100%; transition: width 0.3s; }
+
+  .cli-grand-total {
+    background: #1a1030 !important;
+    border-top: 2px solid #4a2060;
+    font-weight: 700;
+  }
+  .cli-grand-total td { color: var(--signal-yellow) !important; font-size: 13px; }
+
+  .cli-pdf-btn {
+    background: #2a1040; border: 1px solid #9b59b6;
+    color: #c77dff; padding: 9px 18px; border-radius: 6px;
+    cursor: pointer; font-size: 12.5px; white-space: nowrap;
+    font-family: 'Segoe UI', Arial, sans-serif;
+  }
+  .cli-pdf-btn:hover { background: #3a1860; }
+
+  @media (max-width:800px) {
+    .stat-row { grid-template-columns:repeat(2,1fr); }
+    .styled-select { min-width:100%; }
+    .filter-bar { flex-direction:column; align-items:flex-start; }
+    .divider { display:none; }
+  }
+
+  /* ── HQ Wise Summary Tab ── */
+  .tab-btn.hq-tab.active { border-color: #00d4ff; color: #00d4ff; border-bottom-color: var(--panel-2); }
+
+  .hq-controls {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    margin-bottom: 18px;
+  }
+  .hq-search {
+    background: var(--panel-2); border: 1px solid #00d4ff44;
+    color: var(--text); padding: 9px 14px; border-radius: 7px;
+    font-size: 13px; outline: none; width: 240px;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    transition: border-color .2s;
+  }
+  .hq-search:focus { border-color: #00d4ff; }
+  .hq-desg-select {
+    background: var(--panel-2); border: 1px solid #00d4ff44;
+    color: var(--text); padding: 9px 34px 9px 12px; border-radius: 7px;
+    font-size: 13px; outline: none; cursor: pointer;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    appearance: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2300d4ff' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 10px center;
+    min-width: 180px; transition: border-color .2s;
+  }
+  .hq-desg-select:focus { border-color: #00d4ff; }
+  .hq-desg-select option { background: #161d26; color: var(--text); }
+
+  .hq-action-btn {
+    background: var(--panel-2); border: 1px solid var(--line);
+    color: var(--muted); padding: 9px 16px; border-radius: 7px;
+    cursor: pointer; font-size: 12.5px; white-space: nowrap;
+    font-family: 'Segoe UI', Arial, sans-serif; transition: all .15s;
+  }
+  .hq-action-btn:hover { border-color: #00d4ff; color: #00d4ff; }
+  .hq-action-btn.cyan { border-color: #00d4ff; color: #00d4ff; }
+  .hq-action-btn.cyan:hover { background: #001f2f; }
+
+  .hq-status {
+    margin-left: auto; font-size: 12px; color: var(--muted);
+    font-family: 'Courier New', monospace; display: flex; align-items: center; gap: 6px;
+  }
+  .hq-status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--signal-yellow); }
+  .hq-status-dot.ok  { background: #00d4ff; box-shadow: 0 0 6px #00d4ff; }
+  .hq-status-dot.err { background: var(--signal-red); }
+  .hq-status-dot.spin { background: var(--signal-yellow); animation: pulse 1s infinite; }
+
+  .hq-summary-strip {
+    display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px;
+  }
+  .hq-sum-card {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 8px; padding: 12px 20px; min-width: 120px; text-align: center;
+    border-left: 3px solid #00d4ff;
+  }
+  .hq-sum-card .hq-sum-val { font-size: 26px; font-weight: 700; color: #00d4ff; font-family: 'Courier New', monospace; }
+  .hq-sum-card .hq-sum-lbl { font-size: 10px; color: var(--muted); margin-top: 3px; text-transform: uppercase; letter-spacing: 1px; }
+
+  .hq-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+  }
+  .hq-card {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 10px; overflow: hidden;
+    transition: border-color .2s, transform .15s;
+  }
+  .hq-card:hover { border-color: #00d4ff44; }
+  .hq-card-header {
+    background: linear-gradient(90deg, #0d1e2a, #0b1520);
+    border-bottom: 1px solid var(--line);
+    padding: 11px 16px;
+    display: flex; justify-content: space-between; align-items: center;
+    cursor: pointer; user-select: none;
+    transition: background .15s;
+  }
+  .hq-card-header:hover { background: #111e2d; }
+  .hq-card-name { font-size: 13.5px; font-weight: 700; color: #00d4ff; letter-spacing: .5px; }
+  .hq-card-count {
+    background: #00d4ff22; color: #00d4ff;
+    border: 1px solid #00d4ff55;
+    font-size: 11px; font-weight: 700;
+    padding: 2px 10px; border-radius: 20px;
+    font-family: 'Courier New', monospace;
+  }
+  .hq-card-chevron { color: var(--muted); font-size: 11px; margin-left: 8px; transition: transform .25s; }
+  .hq-card-chevron.open { transform: rotate(180deg); }
+
+  .hq-card-body { overflow: hidden; max-height: 0; transition: max-height .3s ease; }
+  .hq-card-body.open { max-height: 3000px; }
+
+  .hq-crew-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .hq-crew-table thead th {
+    background: #0b1520; color: var(--amber);
+    text-transform: uppercase; font-size: 10px; letter-spacing: 1px;
+    padding: 8px 12px; text-align: left;
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+  }
+  .hq-crew-table tbody td { padding: 8px 12px; border-bottom: 1px solid var(--line); color: #d2dae3; }
+  .hq-crew-table tbody tr:last-child td { border-bottom: none; }
+  .hq-crew-table tbody tr:hover td { background: #0d1e2a; }
+  .hq-crew-table tbody tr:nth-child(even) td { background: #0e1319; }
+  .hq-crew-table tbody tr:nth-child(even):hover td { background: #0d1e2a; }
+  .hq-crew-table .sno-td { color: var(--muted); font-family: 'Courier New', monospace; font-size: 11px; width: 32px; }
+  .hq-crew-table .name-td { font-weight: 600; color: #fff; }
+  .hq-crew-table .cms-td  { font-family: 'Courier New', monospace; color: var(--amber); font-size: 12px; }
+  .desg-badge {
+    display: inline-block; padding: 1px 9px; border-radius: 10px;
+    font-size: 10px; font-weight: 700; letter-spacing: .3px;
+  }
+  .desg-lp    { background: #1a3a5c; color: #4d8fd6; }
+  .desg-alp   { background: #0d2b1e; color: #2ecc71; }
+  .desg-other { background: #2a1040; color: #c77dff; }
+
+  .hq-empty { padding: 50px; text-align: center; color: var(--muted); font-size: 13px; }
+
+  /* ── HQ Wise Designation Breakdown Table ── */
+  .hq-desg-table-wrap {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow-x: auto;
+    margin-bottom: 28px;
+  }
+  .hq-desg-table { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 900px; }
+  .hq-desg-table thead tr.hq-thead-top th {
+    position: sticky; top: 0; z-index: 2;
+    background: #081520;
+    color: #00d4ff;
+    text-transform: uppercase;
+    font-size: 10px;
+    letter-spacing: 1px;
+    padding: 10px 12px;
+    border-bottom: 1px solid #1a3a4a;
+    white-space: nowrap;
+    text-align: center;
+  }
+  .hq-desg-table thead tr.hq-thead-top th.hq-col { text-align: left; }
+  .hq-desg-table thead tr.hq-thead-sub th {
+    position: sticky; top: 38px; z-index: 2;
+    background: #0a1a28;
+    color: var(--muted);
+    font-size: 9.5px;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    padding: 6px 10px;
+    border-bottom: 2px solid #1a3a4a;
+    text-align: center;
+    white-space: nowrap;
+  }
+  .hq-desg-table thead tr.hq-thead-sub th.hq-col { text-align: left; background: #081520; }
+  .hq-desg-table tbody td { padding: 9px 12px; border-bottom: 1px solid var(--line); color: #d2dae3; text-align: center; font-family: 'Courier New', monospace; font-size: 12px; }
+  .hq-desg-table tbody td.hq-col { text-align: left; font-family: 'Segoe UI', Arial, sans-serif; font-weight: 700; color: #00d4ff; font-size: 13px; }
+  .hq-desg-table tbody tr:hover td { background: #0d1e2a !important; }
+  .hq-desg-table tbody tr:nth-child(even) td { background: #0e1319; }
+
+  .hq-desg-table .n-total { color: #fff; font-weight: 700; font-size: 13px; }
+  .hq-desg-table .n-ds    { color: #ffe680;  font-weight: 700; }
+  .hq-desg-table .n-rs    { color: #ffe680;  font-weight: 700; }
+  .hq-desg-table .n-both  { color: var(--signal-yellow); font-weight: 700; }
+  .hq-desg-table .n-none  { color: #3a5070; }
+  .hq-desg-table .n-muted { color: var(--muted); }
+
+  .hq-desg-table .hq-grand-row td {
+    background: #081520 !important;
+    border-top: 2px solid #00d4ff44;
+    color: var(--signal-yellow) !important;
+    font-weight: 700;
+    font-size: 12.5px;
+  }
+  .hq-desg-table .hq-grand-row td.hq-col { color: #00d4ff !important; }
+
+  /* sub-group header row (per-HQ designation group header) */
+  .hq-desg-table .hq-group-header td {
+    background: linear-gradient(90deg, #0d1e2a, #0b1520) !important;
+    color: #00d4ff !important;
+    font-weight: 700;
+    font-family: 'Segoe UI', Arial, sans-serif !important;
+    font-size: 13px !important;
+    border-top: 2px solid #1a3a4a;
+    padding: 10px 12px !important;
+    text-align: left !important;
+  }
+
+  /* completion pct badge */
+  .pct-badge {
+    display: inline-block; font-size: 9.5px; padding: 1px 6px;
+    border-radius: 8px; font-family: 'Courier New', monospace;
+    margin-left: 4px; font-weight: 700;
+  }
+  .pct-badge.hi  { background: #2a2800; color: #ffe680; }
+  .pct-badge.mid { background: #2a1a06; color: #f0b429; }
+  .pct-badge.lo  { background: #2a1414; color: #e0413f; }
+
+  /* pending click link */
+  .pending-link {
+    color: #ffe680;
+    font-weight: 700;
+    font-family: 'Courier New', monospace;
+    cursor: pointer;
+    border-bottom: 1px dashed #ffe680;
+    transition: color .15s, border-color .15s;
+  }
+  .pending-link:hover { color: #fff5b0; border-color: #fff5b0; }
+
+  /* ── Pending crew modal ── */
+  #pendingModal {
+    display: none;
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.82);
+    z-index: 9999;
+    overflow: auto;
+    padding: 30px 16px;
+    animation: fadeInModal .18s ease;
+  }
+  @keyframes fadeInModal { from { opacity:0; transform:translateY(-12px); } to { opacity:1; transform:translateY(0); } }
+  .pending-modal-box {
+    background: #11161d;
+    border: 2px solid #ffe680;
+    border-radius: 14px;
+    max-width: 680px;
+    margin: 0 auto;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  }
+  .pending-modal-header {
+    background: linear-gradient(90deg, #1a1a08, #0f1620);
+    border-bottom: 1px solid #3a3a14;
+    padding: 16px 20px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .pending-modal-title {
+    font-size: 15px; font-weight: 700; color: #ffe680;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .pending-modal-meta {
+    font-size: 11px; color: var(--muted); font-family: 'Courier New', monospace; margin-top: 3px;
+  }
+  .pending-modal-close {
+    background: #2a2a14; border: 1px solid #ffe680;
+    color: #ffe680; padding: 6px 14px; border-radius: 7px;
+    cursor: pointer; font-size: 13px; font-family: 'Segoe UI', Arial, sans-serif;
+    transition: background .15s;
+  }
+  .pending-modal-close:hover { background: #3a3a14; }
+  .pending-modal-body { padding: 0; max-height: 500px; overflow-y: auto; }
+  .pending-modal-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .pending-modal-table thead th {
+    position: sticky; top: 0;
+    background: #0d1014;
+    color: var(--amber);
+    text-transform: uppercase; font-size: 10px; letter-spacing: 1px;
+    padding: 10px 16px; border-bottom: 1px solid var(--line);
+    text-align: left; white-space: nowrap;
+  }
+  .pending-modal-table tbody td { padding: 9px 16px; border-bottom: 1px solid var(--line); color: #d2dae3; }
+  .pending-modal-table tbody tr:last-child td { border-bottom: none; }
+  .pending-modal-table tbody tr:hover td { background: #1a1a0a; }
+  .pending-modal-table tbody tr:nth-child(even) td { background: #0e0e10; }
+  .pending-modal-table .p-sno { color: var(--muted); font-family: 'Courier New', monospace; font-size: 11px; width: 36px; text-align: center; }
+  .pending-modal-table .p-name { font-weight: 600; color: #fff; }
+  .pending-modal-table .p-cms  { font-family: 'Courier New', monospace; color: var(--amber); font-size: 11.5px; }
+  .pending-modal-table .p-desg { }
+  .pending-modal-table .p-status { font-size: 11px; }
+  .pending-modal-footer {
+    padding: 12px 20px;
+    border-top: 1px solid var(--line);
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 12px; color: var(--muted);
+    background: #0d1014;
+  }
+
+  .hq-section-title {
+    display: flex; align-items: center; justify-content: space-between;
+    margin: 20px 0 10px; flex-wrap: wrap; gap: 10px;
+  }
+  .hq-section-title h3 { margin: 0; font-size: 14px; letter-spacing: .5px; }
+  .hq-pdf-btn {
+    background: #0d1e2a; border: 1px solid #00d4ff;
+    color: #00d4ff; padding: 8px 16px; border-radius: 6px;
+    cursor: pointer; font-size: 12px; white-space: nowrap;
+    font-family: 'Segoe UI', Arial, sans-serif;
+  }
+  .hq-pdf-btn:hover { background: #1a3a4a; }
+
+  .hq-summary-table-wrap {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow-x: auto;
+    margin-bottom: 28px;
+  }
+  .hq-summary-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .hq-summary-table thead th {
+    position: sticky; top: 0;
+    background: #0d1e2a; color: #00d4ff;
+    text-transform: uppercase; font-size: 10.5px; letter-spacing: 1px;
+    text-align: left; padding: 11px 16px;
+    border-bottom: 2px solid #1a3a4a; white-space: nowrap;
+  }
+  .hq-summary-table thead th.num { text-align: center; }
+  .hq-summary-table tbody td { padding: 10px 16px; border-bottom: 1px solid var(--line); color: #d2dae3; }
+  .hq-summary-table tbody tr:hover { background: #0d1e2a; }
+  .hq-summary-table .sno { color: var(--muted); text-align: center; font-family: 'Courier New', monospace; font-size: 11px; }
+  .hq-summary-table .hq-name-td { font-weight: 700; color: #00d4ff; font-size: 13.5px; }
+  .hq-summary-table .crew-count,.hq-summary-table .ds-count,.hq-summary-table .rs-count,.hq-summary-table .total-count { font-weight: 700; font-family: 'Courier New', monospace; font-size: 14px; text-align: center; }
+  .hq-summary-table .crew-count { color: #fff; }
+  .hq-summary-table .ds-count   { color: #ffe680; }
+  .hq-summary-table .rs-count   { color: #ffe680; }
+  .hq-summary-table .total-count { color: var(--signal-yellow); }
+  .hq-summary-table .bar-cell { min-width: 160px; padding: 10px 16px; }
+  .hq-summary-table .hq-pct { font-size: 10px; color: var(--muted); margin-top: 2px; font-family: 'Courier New', monospace; text-align: center; }
+  .hq-grand-total { background: #0d1e2a !important; border-top: 2px solid #1a3a4a; font-weight: 700; }
+  .hq-grand-total td { color: var(--signal-yellow) !important; font-size: 13px; }
+
+  /* ── Detail Summary Table (all crew × DS/RS status) ── */
+  .detail-summary-wrap {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow-x: auto;
+    margin-bottom: 28px;
+    max-height: 560px;
+    overflow-y: auto;
+  }
+  .detail-summary-table { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 700px; }
+  .detail-summary-table thead th {
+    position: sticky; top: 0; z-index: 2;
+    background: #081520;
+    color: #00d4ff;
+    text-transform: uppercase;
+    font-size: 10px; letter-spacing: 1px;
+    padding: 10px 14px;
+    border-bottom: 2px solid #1a3a4a;
+    text-align: left; white-space: nowrap;
+  }
+  .detail-summary-table thead th.center { text-align: center; }
+  .detail-summary-table tbody td { padding: 8px 14px; border-bottom: 1px solid var(--line); color: #d2dae3; }
+  .detail-summary-table tbody tr:hover td { background: #0d1e2a !important; }
+  .detail-summary-table tbody tr:nth-child(even) td { background: #0e1319; }
+  .detail-summary-table .ds-sno { color: var(--muted); font-family: 'Courier New', monospace; font-size: 11px; text-align: center; width: 36px; }
+  .detail-summary-table .ds-name { font-weight: 700; color: #fff; }
+  .detail-summary-table .ds-hq   { color: #00d4ff; font-size: 12px; }
+  .ds-status-done    { display:inline-block; background:#0d2b1e; border:1px solid #2ecc71; color:#2ecc71; padding:2px 10px; border-radius:10px; font-size:10.5px; font-weight:700; letter-spacing:.3px; }
+  .ds-status-notdone { display:inline-block; background:#1a1a08; border:1px solid #ffe680; color:#ffe680;  padding:2px 10px; border-radius:10px; font-size:10.5px; font-weight:700; letter-spacing:.3px; }
+  .detail-hq-group-header td {
+    background: linear-gradient(90deg, #0d1e2a, #0b1520) !important;
+    color: #00d4ff !important; font-weight: 700;
+    font-family: 'Segoe UI', Arial, sans-serif !important;
+    font-size: 13px !important;
+    border-top: 2px solid #1a3a4a;
+    padding: 9px 14px !important;
+  }
+  .ds-search-bar {
+    display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; align-items: center;
+  }
+  .ds-search-input {
+    background: var(--panel-2); border: 1px solid #00d4ff44;
+    color: var(--text); padding: 8px 13px; border-radius: 7px;
+    font-size: 13px; outline: none; width: 240px;
+    font-family: 'Segoe UI', Arial, sans-serif; transition: border-color .2s;
+  }
+  .ds-search-input:focus { border-color: #00d4ff; }
+  .ds-filter-chip {
+    padding: 5px 14px; border-radius: 20px; border: 1px solid var(--line);
+    font-size: 11.5px; cursor: pointer; background: var(--panel-2); color: var(--muted);
+    transition: all .15s;
+  }
+  .ds-filter-chip.active { border-color: #00d4ff; color: #00d4ff; background: #001f2f; }
+  .ds-count-badge {
+    margin-left: auto; background: var(--panel-2); border: 1px solid var(--line);
+    color: var(--muted); padding: 4px 12px; border-radius: 16px;
+    font-size: 11px; font-family: 'Courier New', monospace;
+  }
+  .ds-hq-select {
+    background: var(--panel-2); border: 1px solid #00d4ff;
+    color: var(--text); padding: 7px 32px 7px 12px; border-radius: 7px;
+    font-size: 13px; outline: none; cursor: pointer;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    appearance: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2300d4ff' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 10px center;
+    min-width: 200px; transition: border-color .2s;
+  }
+  .ds-hq-select:focus { border-color: #00d4ff; box-shadow: 0 0 0 2px rgba(0,212,255,0.12); }
+  .ds-hq-select option { background: #161d26; color: var(--text); }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="eyebrow">RAIPUR DIVISION · CREW SAFETY COUNSELLING</div>
+  <h1>
+    <span class="signal-dots">
+      <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
+    </span>
+    APPROACHING DANGER SIGNAL COUNSELLING / RS APPLICATION PRACTICE
+  </h1>
+  <div class="sub">Live dashboard · Source: Google Apps Script Web App</div>
+</div>
+
+<div class="wrap">
+
+  <div id="msgBox"></div>
+
+  <!-- ── Tab Bar ── -->
+  <div class="tab-bar">
+    <button class="tab-btn active" id="tabDashboard" onclick="switchTab('dashboard')">📋 Dashboard</button>
+    <button class="tab-btn cli-tab" id="tabCliReport" onclick="switchTab('cliReport')">👤 CLI Wise Data Report</button>
+    <button class="tab-btn lp-tab" id="tabLpReport" onclick="switchTab('lpReport')">🚂 LP/ALP Wise Data</button>
+    <button class="tab-btn hq-tab" id="tabHqReport" onclick="switchTab('hqReport')">🏢 HQ Wise Summary</button>
+  </div>
+
+  <!-- ── TAB: Dashboard ── -->
+  <div class="tab-content active" id="tabContentDashboard">
+
+  <!-- ── Filter Bar ── -->
+  <div class="filter-bar">
+
+    <!-- Row 1: Date Range filter -->
+    <div class="filter-row">
+      <div class="filter-group" style="gap:8px;flex-wrap:wrap;">
+        <label style="color:#2ecc71;">📅 FROM DATE :</label>
+        <input type="date" class="date-input" id="fromDate" onchange="applyFilters()" title="From Date">
+        <label style="color:#2ecc71;">TO DATE :</label>
+        <input type="date" class="date-input" id="toDate" onchange="applyFilters()" title="To Date">
+        <span class="date-range-badge" id="dateRangeBadge"></span>
+      </div>
+    </div>
+
+    <!-- Row 2: Sheet / CLI / LP-ALP selectors -->
+    <div class="filter-row">
+      <!-- Sheet selector -->
+      <div class="filter-group">
+        <label>View Sheet :</label>
+        <select class="styled-select" id="sheetSelector" onchange="applyFilters()">
+          <option value="both">📋 Both Sheets</option>
+          <option value="ds">⛔ Danger Signal Counselling</option>
+          <option value="rs">🛠 RS Practice</option>
+        </select>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- CLI Name filter -->
+      <div class="filter-group">
+        <label>Select CLI Name :</label>
+        <select class="styled-select" id="cliFilter" onchange="applyFilters()">
+          <option value="">— All CLI —</option>
+        </select>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- LP / ALP Name filter -->
+      <div class="filter-group">
+        <label>Select LP / ALP Name :</label>
+        <select class="styled-select" id="lpFilter" onchange="applyFilters()">
+          <option value="">— All Crew —</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Row 3: Actions -->
+    <div class="filter-row">
+      <button class="clear-btn" onclick="clearFilters()">✕ Clear Filter</button>
+      <button class="refresh-btn" onclick="loadAll()">⟳ Refresh</button>
+      <button class="refresh-btn" id="debugBtn" onclick="showDebug()" style="border-color:#ff9800;color:#ff9800;font-size:11px;">🔍 Debug Timestamps</button>
+      <button class="refresh-btn" id="pdfBtn" onclick="generatePDFReport()" style="border-color:var(--signal-green);color:var(--signal-green);">📄 Generate PDF Report</button>
+
+      <span style="font-size:12px;color:var(--muted);font-family:'Courier New',monospace;margin-left:auto;">
+        <span class="status-dot wait" id="statusDot"></span>
+        <span id="statusText">Connecting…</span>
+      </span>
+    </div>
+
+  </div>
+
+  <!-- ── Active person banner ── -->
+  <div class="person-banner" id="personBanner">
+    <span>Showing records for</span>
+    <strong id="bannerName"></strong>
+    <span class="person-badge" id="bannerRole"></span>
+    <span id="bannerCount" style="margin-left:auto;color:var(--muted);font-size:12px;"></span>
+  </div>
+
+  <!-- ── Stat Cards ── -->
+  <div class="stat-row">
+    <div class="stat-card red">
+      <div class="stat-label">Danger Signal Counsellings</div>
+      <div class="stat-value" id="dsCount">—</div>
+      <div class="stat-sub" id="dsCountSub"></div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-label">RS Practice Sessions</div>
+      <div class="stat-value" id="rsCount">—</div>
+      <div class="stat-sub" id="rsCountSub"></div>
+    </div>
+    <div class="stat-card blue">
+      <div class="stat-label">Total Entries</div>
+      <div class="stat-value" id="totalCount">—</div>
+      <div class="stat-sub" id="totalCountSub"></div>
+    </div>
+    <div class="stat-card yellow">
+      <div class="stat-label">Last Updated</div>
+      <div class="stat-value" id="lastUpdated" style="font-size:14px;">—</div>
+    </div>
+  </div>
+
+  <!-- ── DS Section ── -->
+  <div class="section-block visible" id="dsSection">
+    <div class="panel-title">
+      <h2 style="color:var(--signal-red);">⛔ APPROACHING DANGER COUNSELLING</h2>
+      <span class="count-chip" id="dsChip">0 records</span>
+    </div>
+    <div class="table-scroll" id="dsTableWrap"><div class="loading">Loading data…</div></div>
+  </div>
+
+  <!-- ── RS Section ── -->
+  <div class="section-block visible" id="rsSection">
+    <div class="panel-title">
+      <h2 style="color:var(--signal-green);">🛠 RS PRACTICE</h2>
+      <span class="count-chip" id="rsChip">0 records</span>
+    </div>
+    <div class="table-scroll" id="rsTableWrap"><div class="loading">Loading data…</div></div>
+  </div>
+
+  <div class="footer-note">RAILWAY BOARD DRIVE · MANUAL REFRESH · RAIPUR DIVISION</div>
+
+    <!-- Debug Modal -->
+  <div id="debugModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:9999;overflow:auto;padding:30px;">
+    <div style="background:#11161d;border:2px solid #ff9800;border-radius:12px;max-width:900px;margin:0 auto;padding:24px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <h3 style="margin:0;color:#ff9800;font-family:monospace;">🔍 RS PRACTICE — RAW TIMESTAMP DEBUG</h3>
+        <button onclick="document.getElementById('debugModal').style.display='none'" style="background:#2a1414;border:1px solid #e0413f;color:#ffb3b0;padding:6px 14px;border-radius:6px;cursor:pointer;">✕ Close</button>
+      </div>
+      <div style="font-size:11px;color:#8694a3;margin-bottom:12px;font-family:monospace;">
+        Shows raw value from sheet → extracted date string → match result for filter date 2026-06-24
+      </div>
+      <div id="debugContent" style="font-family:monospace;font-size:12px;line-height:1.8;max-height:500px;overflow-y:auto;"></div>
+    </div>
+  </div>
+</div><!-- end tabContentDashboard -->
+
+  <!-- ── TAB: CLI Wise Data Report ── -->
+  <div class="tab-content" id="tabContentCliReport">
+
+    <div class="cli-report-header">
+      <h2>👤 CLI WISE DATA REPORT</h2>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <span class="cli-report-meta" id="cliReportMeta">—</span>
+        <button class="cli-pdf-btn" onclick="generateCliPDF()">📄 Export PDF</button>
+      </div>
+    </div>
+
+    <!-- Legend -->
+    <div style="display:flex;gap:18px;margin-bottom:14px;flex-wrap:wrap;">
+      <span style="font-size:12px;display:flex;align-items:center;gap:6px;">
+        <span style="width:12px;height:12px;border-radius:3px;background:var(--signal-red);display:inline-block;"></span>
+        <span style="color:var(--muted);">APPROACHING SIGNAL (Danger Counselling)</span>
+      </span>
+      <span style="font-size:12px;display:flex;align-items:center;gap:6px;">
+        <span style="width:12px;height:12px;border-radius:3px;background:var(--signal-green);display:inline-block;"></span>
+        <span style="color:var(--muted);">RS PRACTICE</span>
+      </span>
+      <span style="font-size:12px;display:flex;align-items:center;gap:6px;">
+        <span style="width:12px;height:12px;border-radius:3px;background:var(--signal-yellow);display:inline-block;"></span>
+        <span style="color:var(--muted);">TOTAL COMBINED</span>
+      </span>
+    </div>
+
+    <div class="cli-report-table-wrap">
+      <table class="cli-report-table" id="cliReportTable">
+        <thead>
+          <tr>
+            <th class="num">S.NO</th>
+            <th>CLI NAME</th>
+            <th class="num">APPROACHING SIGNAL<br><span style="color:var(--signal-red);font-size:10px;">(Danger Counselling)</span></th>
+            <th class="num">RS PRACTICE</th>
+            <th class="num">TOTAL</th>
+            <th>ACTIVITY BAR</th>
+          </tr>
+        </thead>
+        <tbody id="cliReportBody">
+          <tr><td colspan="6" style="padding:40px;text-align:center;color:var(--muted);">Loading data…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="footer-note">CLI WISE REPORT · RAIPUR DIVISION · BOTH SHEETS COMBINED</div>
+  </div><!-- end tabContentCliReport -->
+
+  <!-- ── TAB: LP/ALP Wise Data Report ── -->
+  <div class="tab-content" id="tabContentLpReport">
+
+    <div class="lp-report-header">
+      <h2>🚂 LP / ALP WISE DATA REPORT</h2>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <span class="lp-report-meta" id="lpReportMeta">—</span>
+        <button class="lp-pdf-btn" onclick="generateLpPDF()">📄 Export PDF</button>
+      </div>
+    </div>
+
+    <!-- Role filter chips -->
+    <div class="lp-role-filter">
+      <label>Filter by Role :</label>
+      <button class="role-chip active-all" id="chipAll" onclick="setLpRoleFilter('all')">All Crew</button>
+      <button class="role-chip" id="chipLP"  onclick="setLpRoleFilter('LP')">LP Only</button>
+      <button class="role-chip" id="chipALP" onclick="setLpRoleFilter('ALP')">ALP Only</button>
+    </div>
+
+    <!-- Legend -->
+    <div style="display:flex;gap:18px;margin-bottom:14px;flex-wrap:wrap;">
+      <span style="font-size:12px;display:flex;align-items:center;gap:6px;">
+        <span style="width:12px;height:12px;border-radius:3px;background:var(--signal-red);display:inline-block;"></span>
+        <span style="color:var(--muted);">APPROACHING SIGNAL (Danger Counselling)</span>
+      </span>
+      <span style="font-size:12px;display:flex;align-items:center;gap:6px;">
+        <span style="width:12px;height:12px;border-radius:3px;background:var(--signal-green);display:inline-block;"></span>
+        <span style="color:var(--muted);">RS PRACTICE</span>
+      </span>
+      <span style="font-size:12px;display:flex;align-items:center;gap:6px;">
+        <span style="width:12px;height:12px;border-radius:3px;background:var(--signal-yellow);display:inline-block;"></span>
+        <span style="color:var(--muted);">TOTAL COMBINED</span>
+      </span>
+    </div>
+
+    <div class="lp-report-table-wrap">
+      <table class="lp-report-table" id="lpReportTable">
+        <thead>
+          <tr>
+            <th class="num">S.NO</th>
+            <th>NAME</th>
+            <th class="num">ROLE</th>
+            <th class="num">APPROACHING SIGNAL<br><span style="color:var(--signal-red);font-size:10px;">(Danger Counselling)</span></th>
+            <th class="num">RS PRACTICE</th>
+            <th class="num">TOTAL</th>
+            <th>ACTIVITY BAR</th>
+          </tr>
+        </thead>
+        <tbody id="lpReportBody">
+          <tr><td colspan="7" style="padding:40px;text-align:center;color:var(--muted);">Loading data…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="footer-note">LP/ALP WISE REPORT · RAIPUR DIVISION · BOTH SHEETS COMBINED</div>
+  </div><!-- end tabContentLpReport -->
+
+  <!-- ── TAB: HQ Wise Summary ── -->
+  <div class="tab-content" id="tabContentHqReport">
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px;">
+      <h2 style="margin:0;font-size:17px;color:#00d4ff;letter-spacing:.5px;">🏢 HQ WISE CREW SUMMARY</h2>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <span style="font-size:12px;color:var(--muted);font-family:'Courier New',monospace;" id="hqReportMeta">—</span>
+        <button class="hq-pdf-btn" onclick="generateHqPDF()">📄 Export PDF</button>
+      </div>
+    </div>
+
+    <div class="hq-controls">
+      <input type="text" class="hq-search" id="hqSearch" placeholder="🔍  Search name / CMS ID / HQ…" oninput="hqApplyFilter()">
+      <select class="hq-desg-select" id="hqDesgFilter" onchange="hqApplyFilter()">
+        <option value="">All Designations</option>
+      </select>
+      <button class="hq-action-btn cyan" onclick="hqFetchData()">⟳ Refresh</button>
+      <button class="hq-action-btn" onclick="hqExpandAll()">▼ Expand All</button>
+      <button class="hq-action-btn" onclick="hqCollapseAll()">▲ Collapse All</button>
+      <div class="hq-status">
+        <span class="hq-status-dot" id="hqStatusDot"></span>
+        <span id="hqStatusText">Ready</span>
+      </div>
+    </div>
+
+    <div class="hq-summary-strip" id="hqSummaryStrip"></div>
+
+    <!-- Legend -->
+    <div style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:14px;align-items:center;">
+      <span style="font-size:12px;display:flex;align-items:center;gap:6px;">
+        <span style="width:10px;height:10px;border-radius:2px;background:var(--signal-red);display:inline-block;"></span>
+        <span style="color:var(--muted);">Danger Signal Counselling (DS)</span>
+      </span>
+      <span style="font-size:12px;display:flex;align-items:center;gap:6px;">
+        <span style="width:10px;height:10px;border-radius:2px;background:#ffe680;display:inline-block;"></span>
+        <span style="color:var(--muted);">RS Practice</span>
+      </span>
+      <span style="font-size:12px;display:flex;align-items:center;gap:6px;">
+        <span style="width:10px;height:10px;border-radius:2px;background:var(--signal-yellow);display:inline-block;"></span>
+        <span style="color:var(--muted);">Both Completed</span>
+      </span>
+      <span style="font-size:12px;color:var(--muted);">
+        <span class="pct-badge hi">≥75%</span> High &nbsp;
+        <span class="pct-badge mid">≥40%</span> Mid &nbsp;
+        <span class="pct-badge lo">&lt;40%</span> Low
+      </span>
+    </div>
+
+    <!-- ── Designation × HQ breakdown table ── -->
+    <div class="hq-section-title">
+      <h3 style="color:#00d4ff;">📊 HQ × Designation Breakdown — Total Crew · DS Completed · RS Completed</h3>
+    </div>
+    <div class="hq-desg-table-wrap">
+      <table class="hq-desg-table" id="hqDesgBreakTable">
+        <thead>
+          <tr class="hq-thead-top">
+            <th class="hq-col" rowspan="2" style="min-width:110px;">HQ / LOBBY</th>
+            <th class="hq-col" rowspan="2" style="min-width:80px;">DESIGNATION</th>
+            <th rowspan="2">TOTAL<br>CREW</th>
+            <th colspan="2" style="border-left:1px solid #1a3a4a;border-bottom:1px solid #1a3a4a;color:#ffe680;">⛔ DS COUNSELLING</th>
+            <th colspan="3" style="border-left:1px solid #1a3a4a;border-bottom:1px solid #1a3a4a;color:var(--signal-green);">🛠 RS PRACTICE</th>
+            <th colspan="2" style="border-left:1px solid #1a3a4a;border-bottom:1px solid #1a3a4a;color:var(--signal-yellow);">✅ BOTH DONE</th>
+            <th rowspan="2" style="border-left:1px solid #1a3a4a;min-width:130px;">PENDING<br><span style="font-size:9px;color:var(--muted);">(neither done)</span></th>
+          </tr>
+          <tr class="hq-thead-sub">
+            <th class="hq-col" style="border-left:1px solid #1a3a4a;">Done</th>
+            <th>% Done</th>
+            <th style="border-left:1px solid #1a3a4a;">Done<br><span style="font-size:9px;color:var(--muted);">(crew)</span></th>
+            <th>% Done</th>
+            <th style="color:#8fd6c4;">Entries<br><span style="font-size:9px;color:var(--muted);">(sessions)</span></th>
+            <th style="border-left:1px solid #1a3a4a;">Done</th>
+            <th>% Done</th>
+          </tr>
+        </thead>
+        <tbody id="hqDesgBreakBody">
+          <tr><td colspan="11" style="padding:40px;text-align:center;color:var(--muted);">Click ⟳ Refresh to load data…</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div id="hqRsDiagNote" style="margin-top:10px;font-size:11.5px;color:var(--muted);font-family:'Courier New',monospace;line-height:1.7;"></div>
+
+    <!-- ── Repeated Names — RS Practice ── -->
+    <div class="hq-section-title" style="margin-top:18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+      <h3 style="color:var(--signal-yellow);margin:0;">🔁 REPEATED NAMES — RS PRACTICE (ALP column) — Count = number of times name appears</h3>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <label for="hqRepeatHqFilter" style="font-size:11px;color:var(--muted);">HQ / Lobby:</label>
+        <select id="hqRepeatHqFilter" class="hq-desg-select" onchange="hqApplyRepeatFilter()">
+          <option value="all">All HQs</option>
+        </select>
+        <label for="hqRepeatCountFilter" style="font-size:11px;color:var(--muted);">Filter by count:</label>
+        <select id="hqRepeatCountFilter" class="hq-desg-select" onchange="hqApplyRepeatFilter()">
+          <option value="all">All names</option>
+          <option value="1">1 (not repeated)</option>
+          <option value="2">Exactly 2</option>
+          <option value="3">Exactly 3</option>
+          <option value="4">Exactly 4</option>
+          <option value="2+" selected>2+ (repeated only)</option>
+          <option value="5+">5+</option>
+        </select>
+      </div>
+    </div>
+    <div class="hq-desg-table-wrap">
+      <table class="hq-desg-table" id="hqRepeatTable">
+        <thead>
+          <tr class="hq-thead-top">
+            <th style="width:40px;">#</th>
+            <th class="hq-col">NAME</th>
+            <th class="hq-col">HQ / LOBBY</th>
+            <th class="hq-col">DESIGNATION</th>
+            <th style="color:var(--signal-yellow);">REPEAT COUNT<br><span style="font-size:9px;color:var(--muted);">(times name appears)</span></th>
+          </tr>
+        </thead>
+        <tbody id="hqRepeatBody">
+          <tr><td colspan="5" style="padding:20px;text-align:center;color:var(--muted);">No repeated names found.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ── Detail Summary: All Crew × DS/RS Status ── -->
+    <div class="hq-section-title" style="margin-top:10px;">
+      <h3 style="color:#00d4ff;">📋 DETAIL SUMMARY — ALL CREW (Name · Designation · HQ · RS Practice · Approaching Danger)</h3>
+    </div>
+    <div class="ds-search-bar">
+      <select class="ds-hq-select" id="dsDetailHQFilter" onchange="buildDetailSummary()">
+        <option value="">🏢 All HQ / Lobby</option>
+      </select>
+      <select class="ds-hq-select" id="dsDetailDesgFilter" onchange="buildDetailSummary()" style="min-width:160px;border-color:#f0b429;">
+        <option value="">🏷 All Designations</option>
+      </select>
+      <select class="ds-hq-select" id="dsDetailRSFilter" onchange="buildDetailSummary()" style="min-width:160px;border-color:#2ecc71;">
+        <option value="">🛠 RS Practice — All</option>
+        <option value="done">✔ RS Done</option>
+        <option value="not">✘ RS Not Done</option>
+      </select>
+      <select class="ds-hq-select" id="dsDetailDSFilter" onchange="buildDetailSummary()" style="min-width:180px;border-color:#e0413f;">
+        <option value="">⛔ Approaching Danger — All</option>
+        <option value="done">✔ DS Done</option>
+        <option value="not">✘ DS Not Done</option>
+      </select>
+      <span class="ds-count-badge" id="dsDetailCount">—</span>
+    </div>
+    <div class="ds-search-bar" style="margin-top:-4px;">
+      <button class="ds-filter-chip active" id="dsFiltAll" onclick="setDetailFilter('all')">All</button>
+      <button class="ds-filter-chip" id="dsFiltPending" onclick="setDetailFilter('pending')">⏳ Pending Both</button>
+      <button class="ds-filter-chip" id="dsFiltDSOnly" onclick="setDetailFilter('ds_only')">⛔ DS Done</button>
+      <button class="ds-filter-chip" id="dsFiltDSNot" onclick="setDetailFilter('ds_not')">🚫 DS Not Done</button>
+      <button class="ds-filter-chip" id="dsFiltRSOnly" onclick="setDetailFilter('rs_only')">🛠 RS Done</button>
+      <button class="ds-filter-chip" id="dsFiltRSNot" onclick="setDetailFilter('rs_not')">❌ RS Not Done</button>
+      <button class="ds-filter-chip" id="dsFiltBoth" onclick="setDetailFilter('both')">✅ Both Done</button>
+      <button class="ds-filter-chip" style="margin-left:auto;border-color:#8694a3;color:#8694a3;" onclick="clearDetailFilters()">✕ Clear</button>
+    </div>
+    <div class="detail-summary-wrap">
+      <table class="detail-summary-table" id="detailSummaryTable">
+        <thead>
+          <tr>
+            <th class="center" style="width:36px;">#</th>
+            <th>CREW NAME</th>
+            <th>DESIGNATION</th>
+            <th>HQ / LOBBY</th>
+            <th class="center" style="min-width:130px;">🛠 RS PRACTICE</th>
+            <th class="center" style="min-width:160px;">⛔ APPROACHING DANGER</th>
+          </tr>
+        </thead>
+        <tbody id="detailSummaryBody">
+          <tr><td colspan="6" style="padding:40px;text-align:center;color:var(--muted);">Click ⟳ Refresh to load…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ── Per-HQ Crew Cards ── -->
+    <div class="hq-section-title">
+      <h3 style="color:#00d4ff;">👥 Crew Roster by HQ</h3>
+    </div>
+    <div class="hq-grid" id="hqGrid">
+      <div class="hq-empty">Click <strong style="color:#00d4ff;">⟳ Refresh</strong> to load crew data from roster sheet.</div>
+    </div>
+
+    <div class="footer-note" style="margin-top:28px;">HQ WISE CREW ROSTER · RAIPUR DIVISION · SOUTH EAST CENTRAL RAILWAY</div>
+  </div><!-- end tabContentHqReport -->
+
+<!-- ── HQ Pending Crew Modal ── -->
+<div id="pendingModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.82);z-index:9999;overflow:auto;padding:30px 16px;animation:fadeInModal .18s ease;" onclick="if(event.target===this)closePendingModal()">
+  <div class="pending-modal-box" style="max-width:700px;">
+    <div class="pending-modal-header">
+      <div>
+        <div class="pending-modal-title" id="pendingModalTitle">⏳ PENDING CREW</div>
+        <div class="pending-modal-meta" id="pendingModalMeta"></div>
+      </div>
+      <button class="pending-modal-close" onclick="closePendingModal()">✕ Close</button>
+    </div>
+    <div class="pending-modal-body">
+      <table class="pending-modal-table">
+        <thead>
+          <tr>
+            <th style="width:36px;text-align:center;">#</th>
+            <th>CREW NAME</th>
+            <th>CMS ID</th>
+            <th>DESIGNATION</th>
+            <th>STATUS</th>
+          </tr>
+        </thead>
+        <tbody id="pendingModalBody"></tbody>
+      </table>
+    </div>
+    <div class="pending-modal-footer" id="pendingModalFooter"></div>
+  </div>
+</div>
+
+</div>
+
+<script>
+const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbytgH6bHWlkN7qLKIc3z_2ZsfdmIuYk_5vzSf4HSgEYuRsjDOmhQw960qJESUGzYCUv/exec";
+
+let cache = { ds: null, rs: null };  // raw data from API
+let RESOLVED = { ds: {}, rs: {} };   // resolved actual column names per sheet
+
+// ── Find an actual column name by keyword matching (case-insensitive) ──
+// mustInclude: array of substrings that must ALL be present
+// mustExclude: array of substrings that must NOT be present
+function findCol(cols, mustInclude, mustExclude) {
+  if (!cols) return null;
+  mustExclude = mustExclude || [];
+  return cols.find(c => {
+    const lc = c.toLowerCase();
+    if (mustExclude.some(x => lc.includes(x))) return false;
+    return mustInclude.every(x => lc.includes(x));
+  }) || null;
+}
+
+// ── Work out which real column = which role, for each sheet ──
+function resolveColumns() {
+  RESOLVED.ds = {
+    cli:  findCol(cache.ds && cache.ds.cols, ['cli']),
+    crew: findCol(cache.ds && cache.ds.cols, ['crew'], ['cms', 'designation'])
+  };
+  RESOLVED.rs = {
+    cli: findCol(cache.rs && cache.rs.cols, ['cli']),
+    lp:  findCol(cache.rs && cache.rs.cols, ['lp'],  ['alp', 'cms', 'hq']),
+    alp: findCol(cache.rs && cache.rs.cols, ['alp'], ['cms', 'hq'])
+  };
+}
+
+// ── Fetch ──
+async function fetchSheet(sheetName) {
+  const url = WEBAPP_URL + "?sheet=" + encodeURIComponent(sheetName);
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) throw new Error("HTTP " + res.status);
+  const json = await res.json();
+  if (json.error) throw new Error(json.error);
+  return json;
+}
+
+// ── Helpers ──
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function setStatus(type, text) {
+  document.getElementById('statusDot').className = 'status-dot ' + type;
+  document.getElementById('statusText').textContent = text;
+}
+function setMsg(type, html) {
+  document.getElementById('msgBox').innerHTML = html ? `<div class="${type}-box">${html}</div>` : '';
+}
+
+// ── Build LP/ALP name dropdown from both sheets (all crew columns) ──
+function buildNameDropdown() {
+  // Map: name -> Set of roles
+  const nameRoles = new Map();
+
+  function add(name, role) {
+    name = (name||'').trim();
+    if (!name) return;
+    if (!nameRoles.has(name)) nameRoles.set(name, new Set());
+    nameRoles.get(name).add(role);
+  }
+
+  if (cache.ds) {
+    const { rows } = cache.ds;
+    const c = RESOLVED.ds;
+    rows.forEach(row => {
+      if (c.crew) add(row[c.crew], 'LP');
+    });
+  }
+
+  if (cache.rs) {
+    const { rows } = cache.rs;
+    const c = RESOLVED.rs;
+    rows.forEach(row => {
+      if (c.lp)  add(row[c.lp],  'LP');
+      if (c.alp) add(row[c.alp], 'ALP');
+    });
+  }
+
+  const sel = document.getElementById('lpFilter');
+  const current = sel.value;
+  sel.innerHTML = '<option value="">— All Crew —</option>';
+
+  [...nameRoles.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .forEach(([name, roles]) => {
+      const opt = document.createElement('option');
+      opt.value = name;
+      opt.textContent = name + '  [' + [...roles].join('/') + ']';
+      sel.appendChild(opt);
+    });
+
+  if (current && nameRoles.has(current)) sel.value = current;
+}
+
+// ── Build CLI name dropdown from both sheets ──
+function buildCliDropdown() {
+  const cliNames = new Set();
+
+  if (cache.ds && RESOLVED.ds.cli) {
+    cache.ds.rows.forEach(row => {
+      const v = (row[RESOLVED.ds.cli]||'').trim();
+      if (v) cliNames.add(v);
+    });
+  }
+
+  if (cache.rs && RESOLVED.rs.cli) {
+    cache.rs.rows.forEach(row => {
+      const v = (row[RESOLVED.rs.cli]||'').trim();
+      if (v) cliNames.add(v);
+    });
+  }
+
+  const sel = document.getElementById('cliFilter');
+  const current = sel.value;
+  sel.innerHTML = '<option value="">— All CLI —</option>';
+
+  [...cliNames].sort().forEach(name => {
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name;
+    sel.appendChild(opt);
+  });
+
+  if (current && cliNames.has(current)) sel.value = current;
+}
+
+// ── Filter rows by selected name (checks all name columns) ──
+function filterRows(rows, cols, nameCols, selectedName) {
+  if (!selectedName) return rows;
+  return rows.filter(row =>
+    nameCols.some(col => col && cols.includes(col) && (row[col]||'').trim() === selectedName)
+  );
+}
+
+// ── Format a cell value for display ──
+// Converts date-like values (e.g. "Mon Jun 22 2026 00:00:00 GMT+0530 (India Standard Time)"
+// or ISO strings) into DD/MM/YYYY when the column name suggests it's a date.
+function formatCellValue(colName, val) {
+  if (val === null || val === undefined || val === '') return '';
+  const isTimestampCol = /timestamp/i.test(colName);
+  const isDateCol = !isTimestampCol && /date/i.test(colName) && !/update/i.test(colName);
+  const isTimeCol = !isTimestampCol && /time/i.test(colName) && !/update/i.test(colName);
+
+  // Timestamp column → show DD/MM/YYYY HH:MM:SS
+  if (isTimestampCol) {
+    const d = new Date(val);
+    if (!isNaN(d.getTime())) {
+      const dd   = String(d.getDate()).padStart(2, '0');
+      const mm   = String(d.getMonth() + 1).padStart(2, '0');
+      const yyyy = d.getFullYear();
+      const hh   = String(d.getHours()).padStart(2, '0');
+      const mi   = String(d.getMinutes()).padStart(2, '0');
+      const ss   = String(d.getSeconds()).padStart(2, '0');
+      return `${dd}/${mm}/${yyyy} ${hh}:${mi}:${ss}`;
+    }
+  }
+
+  if (isDateCol) {
+    const d = new Date(val);
+    if (!isNaN(d.getTime())) {
+      const dd = String(d.getDate()).padStart(2, '0');
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const yyyy = d.getFullYear();
+      return `${dd}/${mm}/${yyyy}`;
+    }
+  }
+
+  if (isTimeCol) {
+    const d = new Date(val);
+    if (!isNaN(d.getTime())) {
+      const hh = String(d.getHours()).padStart(2, '0');
+      const mi = String(d.getMinutes()).padStart(2, '0');
+      const ss = String(d.getSeconds()).padStart(2, '0');
+      return `${hh}:${mi}:${ss}`;
+    }
+  }
+
+  return val;
+}
+
+// ── Render table, highlighting matched name cells ──
+function renderTable(targetId, data, highlightCols, highlightVal) {
+  const wrap = document.getElementById(targetId);
+  const { cols, rows } = data;
+  if (!rows || rows.length === 0) {
+    wrap.innerHTML = '<div class="empty-state">No matching records found.</div>';
+    return;
+  }
+  let html = '<table><thead><tr>';
+  cols.forEach(c => html += `<th>${esc(c)}</th>`);
+  html += '</tr></thead><tbody>';
+  rows.forEach(row => {
+    html += '<tr>';
+    cols.forEach(c => {
+      const rawVal = row[c] !== undefined ? row[c] : '';
+      const displayVal = formatCellValue(c, rawVal);
+      const isHL = highlightVal && highlightCols.includes(c) && String(rawVal).trim() === highlightVal;
+      html += `<td${isHL ? ' class="highlight"' : ''}>${esc(displayVal)}</td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+}
+
+// ── Main filter + render logic ──
+function applyFilters() {
+  const sheetVal  = document.getElementById('sheetSelector').value;
+  const personVal = document.getElementById('lpFilter').value;
+  const cliVal    = document.getElementById('cliFilter').value;
+  const fromVal   = document.getElementById('fromDate').value;  // "YYYY-MM-DD" or ""
+  const toVal     = document.getElementById('toDate').value;
+
+  // Date range badge
+  const badge = document.getElementById('dateRangeBadge');
+  if (fromVal || toVal) {
+    const fStr = fromVal ? fromVal.split('-').reverse().join('/') : '…';
+    const tStr = toVal   ? toVal.split('-').reverse().join('/')   : '…';
+    badge.textContent = fStr + ' → ' + tStr;
+    badge.classList.add('show');
+  } else {
+    badge.classList.remove('show');
+  }
+
+  // ── Date filter boundaries as plain YYYY-MM-DD strings (no timezone risk) ──
+  const fromDateStr = fromVal || null;
+  const toDateStr   = toVal   || null;
+
+  // Helper: find date/timestamp column in a sheet's cols array
+  function findDateCol(cols) {
+    if (!cols) return null;
+    // Prefer "Timestamp" column first (Google Forms default)
+    const tsCol = cols.find(c => /timestamp/i.test(c));
+    if (tsCol) return tsCol;
+    // Fall back to any "date" column (excluding "update")
+    return cols.find(c => /date/i.test(c) && !/update/i.test(c)) || null;
+  }
+
+  // Helper: extract YYYY-MM-DD string from any date/timestamp value
+  // Uses LOCAL date parts (getFullYear/Month/Date) to avoid UTC offset shifting the day
+  // This is critical for IST (UTC+5:30) — timestamps like "24 Jun 2026 00:30 IST"
+  // would shift to 23 Jun in UTC, causing them to be wrongly excluded.
+  function extractDateStr(v) {
+    if (v === null || v === undefined || v === '') return null;
+
+    // Google Sheets serial number
+    if (typeof v === 'number') {
+      const d = new Date(Date.UTC(1899, 11, 30) + v * 86400000);
+      if (isNaN(d.getTime())) return null;
+      const yyyy = d.getUTCFullYear();
+      const mm   = String(d.getUTCMonth() + 1).padStart(2, '0');
+      const dd   = String(d.getUTCDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    const s = String(v).trim();
+    if (!s) return null;
+
+    // Already YYYY-MM-DD (with optional time) — take date part only
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+
+    // DD/MM/YYYY or DD-MM-YYYY (Indian format, with optional time like "24/06/2026 10:13:19")
+    // Regex anchors on date part only — time component is intentionally ignored
+    const dmyMatch = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+    if (dmyMatch) {
+      const dd = dmyMatch[1].padStart(2, '0');
+      const mm = dmyMatch[2].padStart(2, '0');
+      return `${dmyMatch[3]}-${mm}-${dd}`;
+    }
+
+    // For any string containing a space (possible datetime), strip time before parsing
+    // e.g. "June 24, 2026 10:13:19" → parse "June 24, 2026" only → avoids UTC offset risk
+    const dateOnlyStr = s.includes(' ') ? s.split(' ')[0] : s;
+
+    // Any other parseable string — use LOCAL date parts to stay in IST
+    const d = new Date(dateOnlyStr);
+    if (!isNaN(d.getTime())) {
+      const yyyy = d.getFullYear();
+      const mm   = String(d.getMonth() + 1).padStart(2, '0');
+      const dd   = String(d.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    // Last resort: try full string
+    const d2 = new Date(s);
+    if (!isNaN(d2.getTime())) {
+      const yyyy = d2.getFullYear();
+      const mm   = String(d2.getMonth() + 1).padStart(2, '0');
+      const dd   = String(d2.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    return null;
+  }
+
+  // Helper: filter rows by date range — pure YYYY-MM-DD string comparison, zero timezone risk
+  function filterByDate(rows, cols, dateCol) {
+    if (!dateCol || (!fromDateStr && !toDateStr)) return rows;
+    return rows.filter(row => {
+      const rowDateStr = extractDateStr(row[dateCol]);
+      if (!rowDateStr) return false;
+      if (fromDateStr && rowDateStr < fromDateStr) return false;
+      if (toDateStr   && rowDateStr > toDateStr)   return false;
+      return true;
+    });
+  }
+
+  // Section visibility
+  const showDS = sheetVal === 'both' || sheetVal === 'ds';
+  const showRS = sheetVal === 'both' || sheetVal === 'rs';
+  document.getElementById('dsSection').className = 'section-block' + (showDS ? ' visible' : '');
+  document.getElementById('rsSection').className = 'section-block' + (showRS ? ' visible' : '');
+
+  // Person banner
+  const banner = document.getElementById('personBanner');
+  if (personVal) {
+    // Determine role label
+    let role = 'CREW';
+    if (cache.rs) {
+      const lpCol = RESOLVED.rs.lp, alpCol = RESOLVED.rs.alp;
+      const inLP  = lpCol  && cache.rs.rows.some(r => (r[lpCol]||'').trim() === personVal);
+      const inALP = alpCol && cache.rs.rows.some(r => (r[alpCol]||'').trim() === personVal);
+      if (inLP && inALP) role = 'LP / ALP';
+      else if (inLP)     role = 'LP';
+      else if (inALP)    role = 'ALP';
+    }
+    document.getElementById('bannerName').textContent = personVal;
+    document.getElementById('bannerRole').textContent = role;
+    banner.classList.add('show');
+  } else {
+    banner.classList.remove('show');
+  }
+
+  // Filter & render DS — search crew name AND cli name columns
+  let dsFiltered = { cols: [], rows: [] };
+  if (cache.ds) {
+    const dsCols = [RESOLVED.ds.crew, RESOLVED.ds.cli].filter(Boolean);
+    let filteredRows = filterRows(cache.ds.rows, cache.ds.cols, dsCols, personVal);
+    if (cliVal && RESOLVED.ds.cli) filteredRows = filterRows(filteredRows, cache.ds.cols, [RESOLVED.ds.cli], cliVal);
+    filteredRows = filterByDate(filteredRows, cache.ds.cols, findDateCol(cache.ds.cols));
+    dsFiltered = { cols: cache.ds.cols, rows: filteredRows };
+    const hlCols = [...dsCols, ...(cliVal && RESOLVED.ds.cli ? [RESOLVED.ds.cli] : [])];
+    renderTable('dsTableWrap', dsFiltered, hlCols, personVal || cliVal);
+  }
+
+  // Filter & render RS — search lp name, alp name, cli name columns
+  let rsFiltered = { cols: [], rows: [] };
+  if (cache.rs) {
+    const rsCols = [RESOLVED.rs.lp, RESOLVED.rs.alp, RESOLVED.rs.cli].filter(Boolean);
+    let filteredRows = filterRows(cache.rs.rows, cache.rs.cols, rsCols, personVal);
+    if (cliVal && RESOLVED.rs.cli) filteredRows = filterRows(filteredRows, cache.rs.cols, [RESOLVED.rs.cli], cliVal);
+    filteredRows = filterByDate(filteredRows, cache.rs.cols, findDateCol(cache.rs.cols));
+    rsFiltered = { cols: cache.rs.cols, rows: filteredRows };
+    const hlCols = [...rsCols, ...(cliVal && RESOLVED.rs.cli ? [RESOLVED.rs.cli] : [])];
+    renderTable('rsTableWrap', rsFiltered, hlCols, personVal || cliVal);
+  }
+
+  // Update counts to reflect filter
+  const dsLen = dsFiltered.rows.length;
+  const rsLen = rsFiltered.rows.length;
+  const totalRaw = ((cache.ds||{rows:[]}).rows.length) + ((cache.rs||{rows:[]}).rows.length);
+
+  document.getElementById('dsCount').textContent = dsLen;
+  document.getElementById('rsCount').textContent = rsLen;
+  document.getElementById('totalCount').textContent = dsLen + rsLen;
+  document.getElementById('dsChip').textContent  = dsLen + ' records';
+  document.getElementById('rsChip').textContent  = rsLen + ' records';
+
+  if (personVal || cliVal || fromVal || toVal) {
+    document.getElementById('dsCountSub').textContent  = 'filtered';
+    document.getElementById('rsCountSub').textContent  = 'filtered';
+    document.getElementById('totalCountSub').textContent = 'of ' + totalRaw + ' total';
+    document.getElementById('bannerCount').textContent = (dsLen + rsLen) + ' records across both sheets';
+  } else {
+    document.getElementById('dsCountSub').textContent  = '';
+    document.getElementById('rsCountSub').textContent  = '';
+    document.getElementById('totalCountSub').textContent = '';
+  }
+
+  // Save current filtered state for PDF export
+  window.lastFiltered = { ds: dsFiltered, rs: rsFiltered, personVal, cliVal, fromVal, toVal, dsLen, rsLen };
+}
+
+function clearFilters() {
+  document.getElementById('lpFilter').value = '';
+  document.getElementById('cliFilter').value = '';
+  document.getElementById('sheetSelector').value = 'both';
+  document.getElementById('fromDate').value = '';
+  document.getElementById('toDate').value = '';
+  applyFilters();
+}
+
+// ── Generate downloadable PDF report (current filters + both sheet counts) ──
+function generatePDFReport() {
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    alert('PDF library failed to load. Please check your internet connection and try again.');
+    return;
+  }
+  const f = window.lastFiltered;
+  if (!f) { alert('No data loaded yet. Please wait for the dashboard to load, then try again.'); return; }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+
+  const pageWidth = doc.internal.pageSize.getWidth();
+  let y = 40;
+
+  // Title
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(15);
+  doc.text('RAIPUR DIVISION · CREW SAFETY COUNSELLING REPORT', pageWidth / 2, y, { align: 'center' });
+  y += 18;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.text('Generated: ' + new Date().toLocaleString('en-IN'), pageWidth / 2, y, { align: 'center' });
+  y += 22;
+
+  // Filter context
+  doc.setFontSize(10);
+  const filterLines = [];
+  if (f.cliVal)    filterLines.push('CLI Name: ' + f.cliVal);
+  if (f.personVal) filterLines.push('Crew Name: ' + f.personVal);
+  if (f.fromVal)   filterLines.push('From: ' + f.fromVal.split('-').reverse().join('/'));
+  if (f.toVal)     filterLines.push('To: '   + f.toVal.split('-').reverse().join('/'));
+  if (filterLines.length) {
+    doc.setFont('helvetica', 'bold');
+    doc.text(filterLines.join('   |   '), 40, y);
+    y += 18;
+  }
+
+  // Total counts summary
+  const totalBoth = f.dsLen + f.rsLen;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.text(
+    'Total Danger Signal Counsellings: ' + f.dsLen +
+    '    |    Total RS Practice Sessions: ' + f.rsLen +
+    '    |    Total (Both Sheets): ' + totalBoth,
+    40, y
+  );
+  y += 20;
+
+  // DS Table
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.text('APPROACHING DANGER COUNSELLING (' + f.dsLen + ' records)', 40, y);
+  y += 8;
+
+  if (f.ds.rows.length) {
+    doc.autoTable({
+      startY: y,
+      head: [f.ds.cols],
+      body: f.ds.rows.map(row => f.ds.cols.map(c => formatCellValue(c, row[c] !== undefined ? row[c] : ''))),
+      styles: { fontSize: 7, cellPadding: 3 },
+      headStyles: { fillColor: [224, 65, 63] },
+      margin: { left: 40, right: 40 },
+      theme: 'grid'
+    });
+    y = doc.lastAutoTable.finalY + 24;
+  } else {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.text('No records.', 40, y + 14);
+    y += 30;
+  }
+
+  // Page break before RS table if needed
+  if (y > doc.internal.pageSize.getHeight() - 100) {
+    doc.addPage();
+    y = 40;
+  }
+
+  // RS Table
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.text('RS PRACTICE (' + f.rsLen + ' records)', 40, y);
+  y += 8;
+
+  if (f.rs.rows.length) {
+    doc.autoTable({
+      startY: y,
+      head: [f.rs.cols],
+      body: f.rs.rows.map(row => f.rs.cols.map(c => formatCellValue(c, row[c] !== undefined ? row[c] : ''))),
+      styles: { fontSize: 7, cellPadding: 3 },
+      headStyles: { fillColor: [43, 182, 115] },
+      margin: { left: 40, right: 40 },
+      theme: 'grid'
+    });
+  } else {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.text('No records.', 40, y + 14);
+  }
+
+  const fnamePart = f.cliVal ? f.cliVal.replace(/[^a-z0-9]+/gi, '_') : 'all';
+  doc.save('Counselling_Report_' + fnamePart + '_' + new Date().toISOString().slice(0,10) + '.pdf');
+}
+
+// ── Debug: show raw timestamp values ──
+function showDebug() {
+  const modal = document.getElementById('debugModal');
+  const content = document.getElementById('debugContent');
+  modal.style.display = 'block';
+
+  if (!cache.rs) {
+    content.innerHTML = '<span style="color:#e0413f">No RS data loaded yet. Click Refresh first.</span>';
+    return;
+  }
+
+  // Find the timestamp/date column
+  const cols = cache.rs.cols;
+  const tsCol = cols.find(c => /timestamp/i.test(c)) ||
+                cols.find(c => /date/i.test(c) && !/update/i.test(c));
+
+  if (!tsCol) {
+    content.innerHTML = '<span style="color:#e0413f">No Timestamp/Date column found in RS PRACTICE sheet.<br>Columns: ' + cols.join(', ') + '</span>';
+    return;
+  }
+
+  const TARGET = '2026-06-24';
+  let html = '<span style="color:#f0b429">Column used: <b>' + tsCol + '</b></span><br><br>';
+  html += '<span style="color:#8694a3">All column names: ' + cols.join(' | ') + '</span><br><br>';
+
+  let matched = 0, total = 0;
+  cache.rs.rows.forEach((row, i) => {
+    const raw = row[tsCol];
+    if (raw === null || raw === undefined || raw === '') return;
+    total++;
+
+    // Replicate extractDateStr logic
+    let extracted = null;
+    if (typeof raw === 'number') {
+      const d = new Date(Date.UTC(1899, 11, 30) + raw * 86400000);
+      if (!isNaN(d.getTime())) {
+        extracted = d.getUTCFullYear() + '-' +
+          String(d.getUTCMonth()+1).padStart(2,'0') + '-' +
+          String(d.getUTCDate()).padStart(2,'0');
+      }
+    } else {
+      const s = String(raw).trim();
+      if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+        extracted = s.slice(0,10);
+      } else {
+        const dmy = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+        if (dmy) {
+          extracted = dmy[3] + '-' + dmy[2].padStart(2,'0') + '-' + dmy[1].padStart(2,'0');
+        } else {
+          // Strip time if present before parsing to avoid UTC offset shifting the date
+          const dateOnlyStr = s.includes(' ') ? s.split(' ')[0] : s;
+          const d = new Date(dateOnlyStr);
+          if (!isNaN(d.getTime())) {
+            extracted = d.getFullYear() + '-' +
+              String(d.getMonth()+1).padStart(2,'0') + '-' +
+              String(d.getDate()).padStart(2,'0');
+          } else {
+            const d2 = new Date(s);
+            if (!isNaN(d2.getTime())) {
+              extracted = d2.getFullYear() + '-' +
+                String(d2.getMonth()+1).padStart(2,'0') + '-' +
+                String(d2.getDate()).padStart(2,'0');
+            }
+          }
+        }
+      }
+    }
+
+    const isMatch = extracted === TARGET;
+    if (isMatch) matched++;
+    const color = isMatch ? '#2bb673' : (extracted ? '#8694a3' : '#e0413f');
+    html += `<span style="color:${color}">Row ${i+1}: RAW="${String(raw).slice(0,60)}" → EXTRACTED="${extracted||'NULL'}" → ${isMatch?'✅ MATCH':'❌ NO'}</span><br>`;
+  });
+
+  html = `<span style="color:#fff;font-size:13px;">Total rows: ${total} | Matched ${TARGET}: <b style="color:#2bb673">${matched}</b></span><br><br>` + html;
+  content.innerHTML = html;
+}
+
+// ── Load from API ──
+async function loadAll() {
+  setStatus('wait', 'Fetching data…');
+  setMsg('', '');
+  document.getElementById('dsTableWrap').innerHTML = '<div class="loading">Loading data…</div>';
+  document.getElementById('rsTableWrap').innerHTML = '<div class="loading">Loading data…</div>';
+
+  const errors = [];
+
+  try {
+    cache.ds = await fetchSheet('APPROACHING DANGER COUNSELLING');
+  } catch(e) {
+    errors.push('<b>APPROACHING DANGER COUNSELLING:</b> ' + esc(e.message));
+    document.getElementById('dsTableWrap').innerHTML = `<div class="empty-state">⚠ ${esc(e.message)}</div>`;
+  }
+
+  try {
+    cache.rs = await fetchSheet('RS PRACTICE');
+  } catch(e) {
+    errors.push('<b>RS PRACTICE:</b> ' + esc(e.message));
+    document.getElementById('rsTableWrap').innerHTML = `<div class="empty-state">⚠ ${esc(e.message)}</div>`;
+  }
+
+  document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString('en-IN');
+
+  resolveColumns();
+  buildNameDropdown();
+  buildCliDropdown();
+  applyFilters();
+  // Rebuild CLI report if that tab is currently visible
+  if (document.getElementById('tabContentCliReport').classList.contains('active')) buildCliReport();
+  // Rebuild LP/ALP report if that tab is currently visible
+  if (document.getElementById('tabContentLpReport').classList.contains('active')) buildLpReport();
+  if (document.getElementById('tabContentHqReport').classList.contains('active')) buildHqSummaryTable(hqAllCrew);
+
+  if (errors.length) {
+    setStatus('err', 'Error loading data');
+    setMsg('error', errors.join('<br>') + '<br><br>Make sure the Apps Script is deployed as <b>Web App → Anyone</b> and redeployed after adding doGet.');
+  } else {
+    const total = ((cache.ds||{rows:[]}).rows.length) + ((cache.rs||{rows:[]}).rows.length);
+    setStatus('live', 'Live — ' + total + ' total records');
+    setMsg('success', '✓ Data loaded · ' + new Date().toLocaleString('en-IN'));
+  }
+}
+
+// ── Tab switching ──
+function switchTab(tab) {
+  document.getElementById('tabContentDashboard').classList.toggle('active', tab === 'dashboard');
+  document.getElementById('tabContentCliReport').classList.toggle('active', tab === 'cliReport');
+  document.getElementById('tabContentLpReport').classList.toggle('active', tab === 'lpReport');
+  document.getElementById('tabContentHqReport').classList.toggle('active', tab === 'hqReport');
+  document.getElementById('tabDashboard').classList.toggle('active', tab === 'dashboard');
+  document.getElementById('tabCliReport').classList.toggle('active', tab === 'cliReport');
+  document.getElementById('tabLpReport').classList.toggle('active', tab === 'lpReport');
+  document.getElementById('tabHqReport').classList.toggle('active', tab === 'hqReport');
+  if (tab === 'cliReport') buildCliReport();
+  if (tab === 'lpReport')  buildLpReport();
+  if (tab === 'hqReport')  hqFetchData();
+}
+
+// ── Build CLI Wise Report ──
+function buildCliReport() {
+  const body = document.getElementById('cliReportBody');
+
+  if (!cache.ds && !cache.rs) {
+    body.innerHTML = '<tr><td colspan="6" style="padding:40px;text-align:center;color:var(--muted);">No data loaded. Please wait for dashboard to load first.</td></tr>';
+    return;
+  }
+
+  // Count per CLI: { cliName -> { ds: N, rs: N } }
+  const counts = new Map();
+
+  function add(name, sheet) {
+    name = (name || '').trim();
+    if (!name) return;
+    if (!counts.has(name)) counts.set(name, { ds: 0, rs: 0 });
+    counts.get(name)[sheet]++;
+  }
+
+  if (cache.ds && RESOLVED.ds.cli) {
+    cache.ds.rows.forEach(row => add(row[RESOLVED.ds.cli], 'ds'));
+  }
+  if (cache.rs && RESOLVED.rs.cli) {
+    cache.rs.rows.forEach(row => add(row[RESOLVED.rs.cli], 'rs'));
+  }
+
+  if (counts.size === 0) {
+    body.innerHTML = '<tr><td colspan="6" style="padding:40px;text-align:center;color:var(--muted);">No CLI name data found in either sheet.</td></tr>';
+    document.getElementById('cliReportMeta').textContent = '0 CLIs';
+    return;
+  }
+
+  // Sort by total desc
+  const sorted = [...counts.entries()]
+    .map(([name, c]) => ({ name, ds: c.ds, rs: c.rs, total: c.ds + c.rs }))
+    .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
+
+  const maxTotal = sorted[0].total || 1;
+  let grandDS = 0, grandRS = 0;
+
+  let html = '';
+  sorted.forEach((row, i) => {
+    grandDS += row.ds;
+    grandRS += row.rs;
+    const barDSpct = Math.round((row.ds / maxTotal) * 100);
+    const barRSpct = Math.round((row.rs / maxTotal) * 100);
+    html += `<tr>
+      <td class="sno">${i + 1}</td>
+      <td class="cli-name">${esc(row.name)}</td>
+      <td class="ds-count">${row.ds || '—'}</td>
+      <td class="rs-count">${row.rs || '—'}</td>
+      <td class="total-count">${row.total}</td>
+      <td class="bar-cell">
+        <div class="cli-bar-wrap" title="DS:${row.ds} RS:${row.rs}">
+          <div class="cli-bar-ds" style="width:${barDSpct}%"></div>
+          <div class="cli-bar-rs" style="width:${barRSpct}%"></div>
+        </div>
+      </td>
+    </tr>`;
+  });
+
+  // Grand total row
+  html += `<tr class="cli-grand-total">
+    <td class="sno">—</td>
+    <td style="color:#c77dff!important;font-weight:700;">GRAND TOTAL (${sorted.length} CLIs)</td>
+    <td class="ds-count" style="color:var(--signal-yellow)!important;">${grandDS}</td>
+    <td class="rs-count" style="color:var(--signal-yellow)!important;">${grandRS}</td>
+    <td class="total-count" style="color:var(--signal-yellow)!important;">${grandDS + grandRS}</td>
+    <td></td>
+  </tr>`;
+
+  body.innerHTML = html;
+  document.getElementById('cliReportMeta').textContent =
+    sorted.length + ' CLIs · DS: ' + grandDS + ' · RS: ' + grandRS + ' · Total: ' + (grandDS + grandRS);
+}
+
+// ── Export CLI Wise Report as PDF ──
+function generateCliPDF() {
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    alert('PDF library not loaded. Check internet connection.'); return;
+  }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+  const pageWidth = doc.internal.pageSize.getWidth();
+
+  let y = 40;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.text('RAIPUR DIVISION — CLI WISE DATA REPORT', pageWidth / 2, y, { align: 'center' });
+  y += 16;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.text('Generated: ' + new Date().toLocaleString('en-IN'), pageWidth / 2, y, { align: 'center' });
+  y += 20;
+
+  // Collect data
+  const counts = new Map();
+  function add(name, sheet) {
+    name = (name || '').trim(); if (!name) return;
+    if (!counts.has(name)) counts.set(name, { ds: 0, rs: 0 });
+    counts.get(name)[sheet]++;
+  }
+  if (cache.ds && RESOLVED.ds.cli) cache.ds.rows.forEach(row => add(row[RESOLVED.ds.cli], 'ds'));
+  if (cache.rs && RESOLVED.rs.cli) cache.rs.rows.forEach(row => add(row[RESOLVED.rs.cli], 'rs'));
+
+  const sorted = [...counts.entries()]
+    .map(([name, c]) => ({ name, ds: c.ds, rs: c.rs, total: c.ds + c.rs }))
+    .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
+
+  let grandDS = 0, grandRS = 0;
+  const body = sorted.map((row, i) => {
+    grandDS += row.ds; grandRS += row.rs;
+    return [i + 1, row.name, row.ds || 0, row.rs || 0, row.total];
+  });
+  body.push(['—', 'GRAND TOTAL (' + sorted.length + ' CLIs)', grandDS, grandRS, grandDS + grandRS]);
+
+  doc.autoTable({
+    startY: y,
+    head: [['S.NO', 'CLI NAME', 'APPROACHING SIGNAL\n(Danger Counselling)', 'RS PRACTICE', 'TOTAL']],
+    body: body,
+    styles: { fontSize: 9, cellPadding: 5 },
+    headStyles: { fillColor: [74, 32, 96], textColor: [199, 125, 255], fontStyle: 'bold', fontSize: 8 },
+    columnStyles: {
+      0: { halign: 'center', cellWidth: 35 },
+      2: { halign: 'center', textColor: [224, 65, 63], fontStyle: 'bold' },
+      3: { halign: 'center', textColor: [43, 182, 115], fontStyle: 'bold' },
+      4: { halign: 'center', textColor: [240, 180, 41], fontStyle: 'bold' }
+    },
+    didParseCell: function(data) {
+      if (data.row.index === body.length - 1) {
+        data.cell.styles.fillColor = [26, 16, 48];
+        data.cell.styles.fontStyle = 'bold';
+        data.cell.styles.textColor = [240, 180, 41];
+      }
+    },
+    margin: { left: 40, right: 40 },
+    theme: 'grid'
+  });
+
+  doc.save('CLI_Wise_Report_' + new Date().toISOString().slice(0, 10) + '.pdf');
+}
+
+// ── LP/ALP Wise Report state ──
+let lpRoleFilter = 'all';
+
+function setLpRoleFilter(role) {
+  lpRoleFilter = role;
+  document.getElementById('chipAll').className = 'role-chip' + (role === 'all' ? ' active-all' : '');
+  document.getElementById('chipLP').className  = 'role-chip' + (role === 'LP'  ? ' active-lp'  : '');
+  document.getElementById('chipALP').className = 'role-chip' + (role === 'ALP' ? ' active-alp' : '');
+  buildLpReport();
+}
+
+// ── Build LP/ALP Wise Report ──
+function buildLpReport() {
+  const body = document.getElementById('lpReportBody');
+
+  if (!cache.ds && !cache.rs) {
+    body.innerHTML = '<tr><td colspan="7" style="padding:40px;text-align:center;color:var(--muted);">No data loaded. Please wait for dashboard to load first.</td></tr>';
+    return;
+  }
+
+  // Map: name -> { role: 'LP'|'ALP'|'LP/ALP', ds: N, rs: N }
+  const counts = new Map();
+
+  function add(name, role, sheet) {
+    name = (name || '').trim();
+    if (!name) return;
+    if (!counts.has(name)) counts.set(name, { role, ds: 0, rs: 0 });
+    else {
+      // upgrade role if seen in both
+      const existing = counts.get(name).role;
+      if (existing !== role && !existing.includes('/')) counts.get(name).role = 'LP/ALP';
+    }
+    counts.get(name)[sheet]++;
+  }
+
+  if (cache.ds) {
+    const c = RESOLVED.ds;
+    cache.ds.rows.forEach(row => {
+      if (c.crew) add(row[c.crew], 'LP', 'ds');
+    });
+  }
+  if (cache.rs) {
+    const c = RESOLVED.rs;
+    cache.rs.rows.forEach(row => {
+      if (c.lp)  add(row[c.lp],  'LP',  'rs');
+      if (c.alp) add(row[c.alp], 'ALP', 'rs');
+    });
+  }
+
+  if (counts.size === 0) {
+    body.innerHTML = '<tr><td colspan="7" style="padding:40px;text-align:center;color:var(--muted);">No LP/ALP name data found in either sheet.</td></tr>';
+    document.getElementById('lpReportMeta').textContent = '0 crew';
+    return;
+  }
+
+  // Apply role filter
+  let entries = [...counts.entries()];
+  if (lpRoleFilter === 'LP')  entries = entries.filter(([,v]) => v.role === 'LP'  || v.role === 'LP/ALP');
+  if (lpRoleFilter === 'ALP') entries = entries.filter(([,v]) => v.role === 'ALP' || v.role === 'LP/ALP');
+
+  // Sort by total desc
+  const sorted = entries
+    .map(([name, c]) => ({ name, role: c.role, ds: c.ds, rs: c.rs, total: c.ds + c.rs }))
+    .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
+
+  if (sorted.length === 0) {
+    body.innerHTML = '<tr><td colspan="7" style="padding:40px;text-align:center;color:var(--muted);">No records for selected role filter.</td></tr>';
+    document.getElementById('lpReportMeta').textContent = '0 crew';
+    return;
+  }
+
+  const maxTotal = sorted[0].total || 1;
+  let grandDS = 0, grandRS = 0;
+  let html = '';
+
+  sorted.forEach((row, i) => {
+    grandDS += row.ds;
+    grandRS += row.rs;
+    const barDSpct = Math.round((row.ds / maxTotal) * 100);
+    const barRSpct = Math.round((row.rs / maxTotal) * 100);
+    const roleCls  = row.role === 'ALP' ? 'ALP' : 'LP';
+    html += `<tr>
+      <td class="sno">${i + 1}</td>
+      <td class="crew-name">${esc(row.name)}</td>
+      <td style="text-align:center;"><span class="role-badge ${roleCls}">${esc(row.role)}</span></td>
+      <td class="ds-count">${row.ds || '—'}</td>
+      <td class="rs-count">${row.rs || '—'}</td>
+      <td class="total-count">${row.total}</td>
+      <td class="bar-cell">
+        <div class="cli-bar-wrap" title="DS:${row.ds} RS:${row.rs}">
+          <div class="cli-bar-ds" style="width:${barDSpct}%"></div>
+          <div class="cli-bar-rs" style="width:${barRSpct}%"></div>
+        </div>
+      </td>
+    </tr>`;
+  });
+
+  html += `<tr class="lp-grand-total">
+    <td class="sno">—</td>
+    <td style="color:#2ecc71!important;font-weight:700;">GRAND TOTAL (${sorted.length} crew)</td>
+    <td></td>
+    <td class="ds-count" style="color:var(--signal-yellow)!important;">${grandDS}</td>
+    <td class="rs-count" style="color:var(--signal-yellow)!important;">${grandRS}</td>
+    <td class="total-count" style="color:var(--signal-yellow)!important;">${grandDS + grandRS}</td>
+    <td></td>
+  </tr>`;
+
+  body.innerHTML = html;
+  document.getElementById('lpReportMeta').textContent =
+    sorted.length + ' crew · DS: ' + grandDS + ' · RS: ' + grandRS + ' · Total: ' + (grandDS + grandRS);
+}
+
+// ── Export LP/ALP Wise Report as PDF ──
+function generateLpPDF() {
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    alert('PDF library not loaded. Check internet connection.'); return;
+  }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+  const pageWidth = doc.internal.pageSize.getWidth();
+
+  let y = 40;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.text('RAIPUR DIVISION — LP/ALP WISE DATA REPORT', pageWidth / 2, y, { align: 'center' });
+  y += 16;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  const roleLabel = lpRoleFilter === 'all' ? 'All Crew' : lpRoleFilter + ' Only';
+  doc.text('Generated: ' + new Date().toLocaleString('en-IN') + '  |  Filter: ' + roleLabel, pageWidth / 2, y, { align: 'center' });
+  y += 20;
+
+  // Collect same as buildLpReport
+  const counts = new Map();
+  function add(name, role, sheet) {
+    name = (name || '').trim(); if (!name) return;
+    if (!counts.has(name)) counts.set(name, { role, ds: 0, rs: 0 });
+    else {
+      const ex = counts.get(name).role;
+      if (ex !== role && !ex.includes('/')) counts.get(name).role = 'LP/ALP';
+    }
+    counts.get(name)[sheet]++;
+  }
+  if (cache.ds) { const c = RESOLVED.ds; cache.ds.rows.forEach(row => { if (c.crew) add(row[c.crew], 'LP', 'ds'); }); }
+  if (cache.rs) { const c = RESOLVED.rs; cache.rs.rows.forEach(row => { if (c.lp) add(row[c.lp], 'LP', 'rs'); if (c.alp) add(row[c.alp], 'ALP', 'rs'); }); }
+
+  let entries = [...counts.entries()];
+  if (lpRoleFilter === 'LP')  entries = entries.filter(([,v]) => v.role === 'LP'  || v.role === 'LP/ALP');
+  if (lpRoleFilter === 'ALP') entries = entries.filter(([,v]) => v.role === 'ALP' || v.role === 'LP/ALP');
+
+  const sorted = entries
+    .map(([name, c]) => ({ name, role: c.role, ds: c.ds, rs: c.rs, total: c.ds + c.rs }))
+    .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
+
+  let grandDS = 0, grandRS = 0;
+  const bodyRows = sorted.map((row, i) => {
+    grandDS += row.ds; grandRS += row.rs;
+    return [i + 1, row.name, row.role, row.ds || 0, row.rs || 0, row.total];
+  });
+  bodyRows.push(['—', 'GRAND TOTAL (' + sorted.length + ' crew)', '', grandDS, grandRS, grandDS + grandRS]);
+
+  doc.autoTable({
+    startY: y,
+    head: [['S.NO', 'NAME', 'ROLE', 'APPROACHING SIGNAL\n(Danger Counselling)', 'RS PRACTICE', 'TOTAL']],
+    body: bodyRows,
+    styles: { fontSize: 9, cellPadding: 5 },
+    headStyles: { fillColor: [13, 43, 30], textColor: [46, 204, 113], fontStyle: 'bold', fontSize: 8 },
+    columnStyles: {
+      0: { halign: 'center', cellWidth: 35 },
+      2: { halign: 'center', cellWidth: 45 },
+      3: { halign: 'center', textColor: [224, 65, 63], fontStyle: 'bold' },
+      4: { halign: 'center', textColor: [43, 182, 115], fontStyle: 'bold' },
+      5: { halign: 'center', textColor: [240, 180, 41], fontStyle: 'bold' }
+    },
+    didParseCell: function(data) {
+      if (data.row.index === bodyRows.length - 1) {
+        data.cell.styles.fillColor = [13, 43, 30];
+        data.cell.styles.fontStyle = 'bold';
+        data.cell.styles.textColor = [240, 180, 41];
+      }
+    },
+    margin: { left: 40, right: 40 },
+    theme: 'grid'
+  });
+
+  doc.save('LP_ALP_Wise_Report_' + new Date().toISOString().slice(0, 10) + '.pdf');
+}
+
+loadAll();
+// Auto-refresh disabled — use the "⟳ Refresh" button to reload manually
+// setInterval(loadAll, 60000);
+
+// ═══════════════════════════════════════════════════════════════════════
+// HQ WISE SUMMARY — fetch from roster sheet via GViz JSON
+// ═══════════════════════════════════════════════════════════════════════
+const HQ_SHEET_ID  = '1p-anwng3nFUpeqrOcUlQ5Kv-5B2hyvjyVswgdlOGhlo';
+const HQ_SHEET_GID = '0';
+
+let hqAllCrew   = [];   // [{name, cmsid, hq, desg}]
+let hqFetched   = false;
+
+const HQ_COL_ALIASES = {
+  name : ['name','crew name','employee name','lp name','alp name'],
+  cmsid: ['cms id','cms','employee id','emp id','staff id','personnel'],
+  hq   : ['hq','home station','lobby','headquarters','home lobby'],
+  desg : ['designation','desig','post','rank','category'],
+};
+
+function hqSetStatus(state, msg) {
+  const d = document.getElementById('hqStatusDot');
+  const t = document.getElementById('hqStatusText');
+  d.className = 'hq-status-dot ' + state;
+  t.textContent = msg;
+}
+
+async function hqFetchData() {
+  hqSetStatus('spin', 'Fetching crew roster…');
+  document.getElementById('hqGrid').innerHTML =
+    '<div class="hq-empty" style="font-family:\'Courier New\',monospace;">⟳ Loading from Google Sheet…</div>';
+
+  const url = 'https://script.google.com/macros/s/AKfycbxIfH_Y2vqZsY9-qIk145JSIhQUYa9KbwxswMGG85M8sMj4v08JMmJndbm6HQUzG3qRpA/exec';
+  try {
+    const res  = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status + ' — ensure sheet is shared as Anyone with the link → Viewer');
+    const json = await res.json();
+    if (json.error) throw new Error(json.error);
+    hqParseRaw(json);
+    hqFetched = true;
+    hqSetStatus('ok', hqAllCrew.length + ' crew loaded · ' + new Date().toLocaleTimeString('en-IN'));
+  } catch(e) {
+    hqSetStatus('err', 'Fetch failed');
+    document.getElementById('hqGrid').innerHTML =
+      `<div class="hq-empty">
+        <div style="font-size:28px;margin-bottom:12px;">⚠️</div>
+        <div style="color:var(--signal-red);margin-bottom:10px;font-weight:700;font-size:14px;">Could not load crew roster.</div>
+        <div style="font-size:12px;color:var(--muted);font-family:'Courier New',monospace;margin-top:8px;">Error: ${esc(e.message)}</div>
+      </div>`;
+  }
+}
+
+function hqParseRaw(json) {
+  const origHdr = json.cols || [];
+  const headers = origHdr.map(h => String(h).toLowerCase().trim());
+  const rows    = json.rows || [];
+
+  // Auto-detect column indices
+  const colIdx = {};
+  for (const [key, aliases] of Object.entries(HQ_COL_ALIASES)) {
+    for (const alias of aliases) {
+      const idx = headers.findIndex(h => h.includes(alias));
+      if (idx !== -1) { colIdx[key] = origHdr[idx]; break; }
+    }
+  }
+  // Positional fallback using original header names
+  if (!colIdx.name  && origHdr[0]) colIdx.name  = origHdr[0];
+  if (!colIdx.cmsid && origHdr[1]) colIdx.cmsid = origHdr[1];
+  if (!colIdx.hq    && origHdr[2]) colIdx.hq    = origHdr[2];
+  if (!colIdx.desg  && origHdr[3]) colIdx.desg  = origHdr[3];
+
+  hqAllCrew = rows.map(r => ({
+    name : String(r[colIdx.name]  || '').trim(),
+    cmsid: String(r[colIdx.cmsid] || '').trim(),
+    hq   : String(r[colIdx.hq]   || '').trim() || 'UNKNOWN',
+    desg : String(r[colIdx.desg]  || '').trim() || '—',
+  })).filter(c => c.name);
+
+  // Populate designation dropdown
+  const desgSet = [...new Set(hqAllCrew.map(c => c.desg).filter(d => d && d !== '—'))].sort();
+  const sel = document.getElementById('hqDesgFilter');
+  sel.innerHTML = '<option value="">All Designations</option>' +
+    desgSet.map(d => `<option value="${esc(d)}">${esc(d)}</option>`).join('');
+
+  // Populate Detail Summary HQ selector
+  const hqSet = [...new Set(hqAllCrew.map(c => c.hq).filter(h => h && h !== 'UNKNOWN'))].sort();
+  const hqSel = document.getElementById('dsDetailHQFilter');
+  if (hqSel) {
+    const prev = hqSel.value;
+    hqSel.innerHTML = '<option value="">🏢 All HQ / Lobby</option>' +
+      hqSet.map(h => `<option value="${esc(h)}">${esc(h)}</option>`).join('');
+    if (prev && hqSet.includes(prev)) hqSel.value = prev;
+  }
+
+  hqApplyFilter();
+}
+
+function hqApplyFilter() {
+  const q    = (document.getElementById('hqSearch').value || '').toLowerCase().trim();
+  const desg = document.getElementById('hqDesgFilter').value;
+
+  const filtered = hqAllCrew.filter(c => {
+    const mQ = !q || c.name.toLowerCase().includes(q) || c.cmsid.toLowerCase().includes(q) || c.hq.toLowerCase().includes(q);
+    const mD = !desg || c.desg === desg;
+    return mQ && mD;
+  });
+
+  hqRenderSummary(filtered);
+  hqRenderGrid(filtered, q);
+  buildDetailSummary();
+}
+
+function hqRenderSummary(data) {
+  const hqCount = [...new Set(data.map(c => c.hq))].length;
+
+  // Normalize designations the same way as the breakdown table
+  function normD(d) {
+    const u = (d || '').toUpperCase().trim();
+    if (!u || u === '—') return 'OTHER';
+    if (/SR[\.\s]*ALP|SENIOR[\s]*ALP/.test(u)) return 'SR ALP';
+    if (/LPM/.test(u)) return 'LPM';
+    if (/LPP/.test(u)) return 'LPP';
+    if (/\bALP\b|ASST[\.\s]*LP|ASSISTANT[\s]*LOCO/.test(u)) return 'ALP';
+    if (/\bLP\b|LOCO[\s]*PILOT/.test(u)) return 'LP';
+    return u.length > 12 ? u.slice(0, 12) : u;
+  }
+
+  const SUMMARY_ORDER = ['LP', 'LPP', 'LPM', 'ALP', 'SR ALP'];
+  const desgMap = {};
+  data.forEach(c => {
+    const nd = normD(c.desg);
+    desgMap[nd] = (desgMap[nd] || 0) + 1;
+  });
+
+  // Show ordered first, then any remaining sorted by count
+  const ordered = SUMMARY_ORDER.filter(d => desgMap[d]);
+  const others  = Object.keys(desgMap).filter(d => !SUMMARY_ORDER.includes(d) && d !== 'OTHER').sort((a,b) => desgMap[b]-desgMap[a]);
+  const showDesg = [...ordered, ...others];
+
+  let html = `
+    <div class="hq-sum-card"><div class="hq-sum-val">${data.length}</div><div class="hq-sum-lbl">Total Crew</div></div>
+    <div class="hq-sum-card"><div class="hq-sum-val">${hqCount}</div><div class="hq-sum-lbl">HQs / Lobbies</div></div>`;
+  showDesg.forEach(d => {
+    html += `<div class="hq-sum-card"><div class="hq-sum-val" style="font-size:20px">${desgMap[d]}</div><div class="hq-sum-lbl">${esc(d)}</div></div>`;
+  });
+  document.getElementById('hqSummaryStrip').innerHTML = html;
+  document.getElementById('hqReportMeta').textContent =
+    data.length + ' crew · ' + hqCount + ' HQs';
+
+  // ── Build DS/RS counts per HQ from cached main data ──
+  buildHqSummaryTable(data);
+}
+
+function buildHqSummaryTable(rosterData) {
+  const tbody = document.getElementById('hqDesgBreakBody');
+  if (!tbody) return;
+
+  if (!rosterData || rosterData.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="11" style="padding:30px;text-align:center;color:var(--muted);">No crew roster data. Click ⟳ Refresh.</td></tr>';
+    return;
+  }
+
+  // ── STEP 1: Normalize designation into known categories ──
+  // Catches variations like "LP", "Loco Pilot", "ALP", "Asst.LP", "Sr.ALP", "LPM", "LPP" etc.
+  function normalizeDesg(d) {
+    const u = (d || '').toUpperCase().trim();
+    if (!u || u === '—') return 'OTHER';
+    if (/SR[\.\s]*ALP|SENIOR[\s]*ALP/.test(u)) return 'SR ALP';
+    if (/LPM/.test(u)) return 'LPM';
+    if (/LPP/.test(u)) return 'LPP';
+    if (/\bALP\b|ASST[\.\s]*LP|ASSISTANT[\s]*LOCO/.test(u)) return 'ALP';
+    if (/\bLP\b|LOCO[\s]*PILOT/.test(u)) return 'LP';
+    return u.length > 12 ? u.slice(0, 12) : u;
+  }
+
+  const DESG_ORDER = ['LP', 'ALP', 'SR ALP', 'LPP', 'LPM'];
+
+  // Normalize a name for MATCHING purposes only (case / spacing / punctuation
+  // insensitive) so that e.g. "Ramesh  Kumar", "RAMESH KUMAR", "Ramesh Kumar."
+  // and "ramesh kumar" are all recognised as the same roster crew member.
+  // Display always uses the original, un-normalized name.
+  function normName(s) {
+    return String(s || '')
+      .toUpperCase()
+      .replace(/[.\-_]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  // ── STEP 2: Build name→HQ and name→desg maps from roster ──
+  // Structure: hqDesgMap[hq][desg] = Set of crew names (original casing, for display)
+  const hqDesgMap = {};   // { hq: { desg: Set<name> } }
+  const nameToHq  = {};   // { normName: hq }        — normalized lookup
+  const nameToDesg= {};   // { normName: normalizedDesg }
+  const normToOrig= {};   // { normName: original roster name } — for reconciling display names
+
+  rosterData.forEach(c => {
+    const hq   = (c.hq   || 'UNKNOWN').trim();
+    const desg = normalizeDesg(c.desg);
+    const name = c.name.trim();
+    const nrm  = normName(name);
+    if (!hqDesgMap[hq]) hqDesgMap[hq] = {};
+    if (!hqDesgMap[hq][desg]) hqDesgMap[hq][desg] = new Set();
+    hqDesgMap[hq][desg].add(name);
+    nameToHq[nrm]   = hq;
+    nameToDesg[nrm] = desg;
+    normToOrig[nrm] = name;
+  });
+
+  // ── STEP 3: Extract HQ column from DS/RS sheets ──
+  function findHqCol(cols) {
+    return (cols || []).find(c => /\bhq\b|home.?station|lobby|headquarter/i.test(c)) || null;
+  }
+  function findCrewCol(cols, sheet) {
+    // DS sheet: crew name col; RS sheet: lp / alp cols
+    if (sheet === 'ds') return (cols || []).find(c => /crew|lp name|employee name/i.test(c) && !/cms|desg|hq/i.test(c)) || null;
+    return null;
+  }
+  function findLpCol(cols)  { return (cols||[]).find(c => /\blp\b/i.test(c) && !/alp|cms|hq/i.test(c)) || null; }
+  function findAlpCol(cols) { return (cols||[]).find(c => /\balp\b/i.test(c) && !/cms|hq/i.test(c)) || null; }
+
+  // ── STEP 4: Count DS / RS completions per (HQ, desg) — by matching name ──
+  // dsNames[hq][desg] = { names: Set<original name who completed>, raw: total row-entries (incl. repeats) }
+  const dsNames = {};  // { hq: { desg: { names:Set, raw:Number } } }
+  const rsNames = {};  // { hq: { desg: { names:Set, raw:Number } } }
+
+  // Diagnostics: raw sheet-entry counts vs. how many we could actually match to a roster crew member.
+  const rsDiag = { totalEntries: 0, matched: 0, unmatched: 0, unmatchedNames: {}, dupeNames: {}, desgMismatch: {} };
+  const dsDiag = { totalEntries: 0, matched: 0, unmatched: 0 };
+  const isAlpFamily = d => d === 'ALP' || d === 'SR ALP';
+
+  function addCount(store, hq, desg, name) {
+    if (!hq || !name) return;
+    if (!store[hq]) store[hq] = {};
+    if (!store[hq][desg]) store[hq][desg] = { names: new Set(), raw: 0 };
+    store[hq][desg].names.add(name);
+    store[hq][desg].raw++;
+  }
+
+  if (cache.ds && cache.ds.rows) {
+    const hqCol   = findHqCol(cache.ds.cols);
+    const crewCol = findCrewCol(cache.ds.cols, 'ds') || RESOLVED.ds.crew;
+    cache.ds.rows.forEach(row => {
+      const nm = crewCol ? (row[crewCol] || '').trim() : '';
+      if (!nm) return;
+      dsDiag.totalEntries++;
+      const nrm = normName(nm);
+      // Try HQ directly from row; fallback: roster lookup via normalized name match
+      let hq = hqCol ? (row[hqCol] || '').trim() : '';
+      if (!hq) hq = nameToHq[nrm] || '';
+      const desg = nameToDesg[nrm] || 'OTHER';
+      const dispName = normToOrig[nrm] || nm;  // use roster's exact spelling once matched
+      if (nameToHq[nrm]) dsDiag.matched++; else dsDiag.unmatched++;
+      addCount(dsNames, hq, desg, dispName);
+    });
+  }
+
+  if (cache.rs && cache.rs.rows) {
+    const hqCol  = findHqCol(cache.rs.cols);
+    const alpCol = findAlpCol(cache.rs.cols) || RESOLVED.rs.alp;
+    const seenNorm = {}; // track occurrence count per normalized name (for duplicate diagnostics)
+    const seenInfo = {}; // { nrm: { name, hq, desg } } — last-seen HQ/desg for display in repeat table
+    cache.rs.rows.forEach(row => {
+      // HQ Wise Summary's RS Practice counts are ALP-only — the LP name column
+      // is intentionally excluded here.
+      [alpCol].forEach(col => {
+        if (!col) return;
+        const nm = (row[col] || '').trim();
+        if (!nm) return;
+        rsDiag.totalEntries++;
+        const nrm = normName(nm);
+        seenNorm[nrm] = (seenNorm[nrm] || 0) + 1;
+        let hq = hqCol ? (row[hqCol] || '').trim() : '';
+        if (!hq) hq = nameToHq[nrm] || '';
+        const desg = nameToDesg[nrm] || 'OTHER';
+        const dispName = normToOrig[nrm] || nm;
+        seenInfo[nrm] = { name: dispName, hq: hq || nameToHq[nrm] || 'UNKNOWN', desg };
+        if (nameToHq[nrm]) {
+          rsDiag.matched++;
+        } else {
+          rsDiag.unmatched++;
+          rsDiag.unmatchedNames[nm] = (rsDiag.unmatchedNames[nm] || 0) + 1;
+        }
+        // RS Practice (ALP column) should only ever populate ALP / SR ALP rows.
+        // If the roster lists this matched name under an LP-family designation
+        // (LP, LPM, LPP, LPG, etc.), don't create a phantom LP row for it —
+        // flag it as a designation mismatch instead so it can be reconciled.
+        if (!isAlpFamily(desg)) {
+          if (nameToHq[nrm]) {
+            rsDiag.desgMismatch[dispName] = { hq, rosterDesg: desg, count: (rsDiag.desgMismatch[dispName]?.count || 0) + 1 };
+          }
+          return;
+        }
+        addCount(rsNames, hq, desg, dispName);
+      });
+    });
+    Object.entries(seenNorm).forEach(([nrm, n]) => {
+      const info = seenInfo[nrm] || {};
+      rsDiag.dupeRecords = rsDiag.dupeRecords || [];
+      rsDiag.dupeRecords.push({ name: info.name || normToOrig[nrm] || nrm, hq: info.hq || 'UNKNOWN', desg: info.desg || 'OTHER', count: n });
+      if (n > 1) rsDiag.dupeNames[info.name || normToOrig[nrm] || nrm] = n;
+    });
+  }
+
+  // ── STEP 5: Render table ──
+  const allHQs = Object.keys(hqDesgMap).sort();
+
+  function pctBadge(done, total) {
+    if (!total) return '<span class="n-none">—</span>';
+    const p = Math.round((done / total) * 100);
+    const cls = p >= 75 ? 'hi' : p >= 40 ? 'mid' : 'lo';
+    return `<span class="pct-badge ${cls}">${p}%</span>`;
+  }
+
+  let html = '';
+  // Grand totals
+  let gTotal=0, gDS=0, gRS=0, gRsRaw=0, gBoth=0, gPending=0;
+
+  allHQs.forEach(hq => {
+    const desgMap = hqDesgMap[hq];
+    // Collect all designations for this HQ, ordered
+    const hqDesgs = [
+      ...DESG_ORDER.filter(d => desgMap[d]),
+      ...Object.keys(desgMap).filter(d => !DESG_ORDER.includes(d)).sort()
+    ];
+
+    let hqTotal=0, hqDS=0, hqRS=0, hqRsRaw=0, hqBoth=0, hqPending=0;
+
+    // HQ group header
+    html += `<tr class="hq-group-header">
+      <td colspan="11">🏢 ${esc(hq)}</td>
+    </tr>`;
+
+    hqDesgs.forEach(desg => {
+      const crewSet  = desgMap[desg] || new Set();
+      const dsSet    = (dsNames[hq]  && dsNames[hq][desg])  ? dsNames[hq][desg].names  : new Set();
+      const rsSet    = (rsNames[hq]  && rsNames[hq][desg])  ? rsNames[hq][desg].names  : new Set();
+      const rsRaw    = (rsNames[hq]  && rsNames[hq][desg])  ? rsNames[hq][desg].raw    : 0;
+      const total    = crewSet.size;
+      const dsDone   = dsSet.size;
+      const rsDone   = rsSet.size;
+      // "both done" = name in both dsSet and rsSet
+      let bothDone = 0;
+      dsSet.forEach(n => { if (rsSet.has(n)) bothDone++; });
+      const pending  = Math.max(0, total - Math.max(dsDone, rsDone, bothDone));
+
+      hqTotal   += total;   hqDS   += dsDone;
+      hqRS      += rsDone;  hqBoth += bothDone;
+      hqPending += pending; hqRsRaw += rsRaw;
+
+      const pendingCrew = [...crewSet].filter(n => !dsSet.has(n) && !rsSet.has(n));
+      const pendingCell = pending > 0
+        ? `<span class="pending-link" onclick="showHqPendingModal(${JSON.stringify(pendingCrew)}, ${JSON.stringify(hq)}, ${JSON.stringify(desg)})">${pending}</span>`
+        : '<span class="n-muted">0</span>';
+      html += `<tr>
+        <td class="hq-col" style="padding-left:22px;color:var(--muted);font-size:11.5px;">${esc(hq)}</td>
+        <td class="hq-col"><span class="desg-badge ${desg==='ALP'||desg==='SR ALP'?'desg-alp':desg==='LP'||desg==='LPM'||desg==='LPP'?'desg-lp':'desg-other'}">${esc(desg)}</span></td>
+        <td class="n-total">${total}</td>
+        <td class="n-ds" style="border-left:1px solid #1a3a4a;">${dsDone || '<span class="n-none">0</span>'}</td>
+        <td>${pctBadge(dsDone, total)}</td>
+        <td class="n-rs" style="border-left:1px solid #1a3a4a;">${rsDone || '<span class="n-none">0</span>'}</td>
+        <td>${pctBadge(rsDone, total)}</td>
+        <td style="color:#8fd6c4;">${rsRaw || '<span class="n-none">0</span>'}</td>
+        <td class="n-both" style="border-left:1px solid #1a3a4a;">${bothDone || '<span class="n-none">0</span>'}</td>
+        <td>${pctBadge(bothDone, total)}</td>
+        <td class="${pending>0?'n-ds':'n-muted'}" style="border-left:1px solid #1a3a4a;">${pendingCell}</td>
+      </tr>`;
+    });
+
+    // HQ subtotal row
+    gTotal+=hqTotal; gDS+=hqDS; gRS+=hqRS; gRsRaw+=hqRsRaw; gBoth+=hqBoth; gPending+=hqPending;
+    const hqAllPendingCrew = hqDesgs.flatMap(d => {
+      const cs = desgMap[d] || new Set();
+      const ds2 = (dsNames[hq] && dsNames[hq][d]) ? dsNames[hq][d].names : new Set();
+      const rs2 = (rsNames[hq] && rsNames[hq][d]) ? rsNames[hq][d].names : new Set();
+      return [...cs].filter(n => !ds2.has(n) && !rs2.has(n));
+    });
+    const hqPendingCell = hqPending > 0
+      ? `<span class="pending-link" onclick="showHqPendingModal(${JSON.stringify(hqAllPendingCrew)}, ${JSON.stringify(hq)}, 'ALL')">${hqPending}</span>`
+      : '<span class="n-muted">0</span>';
+    html += `<tr style="background:#0d1e2a!important;">
+      <td class="hq-col" style="color:#00d4ff;font-weight:700;padding-left:10px;">↳ ${esc(hq)} TOTAL</td>
+      <td class="hq-col" style="color:var(--muted);font-size:11px;">${hqDesgs.length} desig.</td>
+      <td class="n-total">${hqTotal}</td>
+      <td class="n-ds" style="border-left:1px solid #1a3a4a;">${hqDS}</td>
+      <td>${pctBadge(hqDS, hqTotal)}</td>
+      <td class="n-rs" style="border-left:1px solid #1a3a4a;">${hqRS}</td>
+      <td>${pctBadge(hqRS, hqTotal)}</td>
+      <td style="color:#8fd6c4;">${hqRsRaw}</td>
+      <td class="n-both" style="border-left:1px solid #1a3a4a;">${hqBoth}</td>
+      <td>${pctBadge(hqBoth, hqTotal)}</td>
+      <td class="${hqPending>0?'n-ds':'n-muted'}" style="border-left:1px solid #1a3a4a;">${hqPendingCell}</td>
+    </tr>`;
+  });
+
+  // Grand total
+  html += `<tr class="hq-grand-row">
+    <td class="hq-col" colspan="2">🏆 GRAND TOTAL (${allHQs.length} HQs)</td>
+    <td>${gTotal}</td>
+    <td style="border-left:1px solid #1a3a4a;">${gDS}</td>
+    <td>${pctBadge(gDS, gTotal)}</td>
+    <td style="border-left:1px solid #1a3a4a;">${gRS}</td>
+    <td>${pctBadge(gRS, gTotal)}</td>
+    <td style="color:#8fd6c4;">${gRsRaw}</td>
+    <td style="border-left:1px solid #1a3a4a;">${gBoth}</td>
+    <td>${pctBadge(gBoth, gTotal)}</td>
+    <td style="border-left:1px solid #1a3a4a;">${gPending}</td>
+  </tr>`;
+
+  // ── STEP 6: Diagnostics note — explains any gap between raw RS Practice
+  // sheet entries (e.g. 340) and the "RS Done" unique-crew count (e.g. 175) ──
+  const diagNote = document.getElementById('hqRsDiagNote');
+  if (diagNote) {
+    const dupeList = Object.entries(rsDiag.dupeNames).sort((a,b)=>b[1]-a[1]);
+    const dupeExtra = dupeList.reduce((s,[,n]) => s + (n-1), 0); // sessions beyond the 1st per person
+    const unmatchedList = Object.entries(rsDiag.unmatchedNames).sort((a,b)=>b[1]-a[1]);
+    let note = `<b style="color:#8fd6c4;">🛠 RS PRACTICE — reconciliation:</b> `
+      + `${rsDiag.totalEntries} raw entries (ALP name column only, incl. repeat sessions) in RS Practice sheet `
+      + `→ ${rsDiag.matched} matched a roster crew member, ${rsDiag.unmatched} did not match any roster name even after ignoring case/spacing. `
+      + `Grand total "RS Entries" column above = ${gRsRaw} (should reconcile to the ALP-designation portion of the matched entries). `
+      + `"RS Done" (${gRS}) is the count of <u>unique</u> ALP crew who did at least one RS session — it will always be ≤ RS Entries when the same person practiced more than once. `
+      + `LP name column entries are excluded from this report, and only ALP / SR ALP rows carry RS Practice numbers.`;
+    if (dupeList.length) {
+      note += `<br><b style="color:var(--signal-yellow);">🔁 Repeated names (practiced more than once):</b> ${dupeList.length} crew member(s), contributing ${dupeExtra} extra session-entries beyond their first. `
+        + `Top repeats: ` + dupeList.slice(0,8).map(([n,c]) => `${esc(n)} (${c}×)`).join(', ') + (dupeList.length>8 ? ', …' : '') + '.';
+    }
+    const mismatchList = Object.entries(rsDiag.desgMismatch);
+    if (mismatchList.length) {
+      note += `<br><b style="color:var(--signal-yellow);">🔀 Roster designation ≠ ALP:</b> ${mismatchList.length} name(s) found in the RS Practice sheet's ALP column, but the roster lists them under a non-ALP designation — excluded from every LP/LPM/LPP/LPG row so those rows show zero RS numbers. `
+        + `Names: ` + mismatchList.slice(0,10).map(([n,v]) => `${esc(n)} (roster: ${esc(v.rosterDesg)}, HQ: ${esc(v.hq)})`).join(', ') + (mismatchList.length>10 ? ', …' : '') + `. Verify whether these staff are actually ALP or the sheet/roster designation needs correcting.`;
+    }
+    if (unmatchedList.length) {
+      note += `<br><b style="color:var(--signal-red);">⚠ Names in RS Practice sheet not found in roster:</b> ${unmatchedList.length} distinct name(s), ${rsDiag.unmatched} total entries — these are NOT counted in any HQ/designation row above. `
+        + `Check for typos vs. the roster, staff missing from the roster sheet, or blank/placeholder rows. Examples: `
+        + unmatchedList.slice(0,10).map(([n,c]) => `${esc(n)} (${c}×)`).join(', ') + (unmatchedList.length>10 ? ', …' : '') + '.';
+    }
+    diagNote.innerHTML = note;
+  }
+
+  // ── STEP 7: Repeated Names table — every ALP name, with an explicit
+  // count (1 = not repeated). Filterable via hqApplyRepeatFilter(). ──
+  window.hqRepeatAllRecords = (rsDiag.dupeRecords || []).sort((a,b) => b.count - a.count || a.name.localeCompare(b.name));
+  hqApplyRepeatFilter();
+
+  tbody.innerHTML = html;
+}
+
+// ── Render / filter the Repeated Names — RS Practice table ──
+function hqApplyRepeatFilter() {
+  const repeatBody = document.getElementById('hqRepeatBody');
+  if (!repeatBody) return;
+  const records = window.hqRepeatAllRecords || [];
+
+  // Populate HQ dropdown once per data load (preserve current selection across re-renders)
+  const hqSel = document.getElementById('hqRepeatHqFilter');
+  if (hqSel && hqSel.dataset.builtFor !== String(records.length)) {
+    const hqs = [...new Set(records.map(r => r.hq))].sort();
+    const prev = hqSel.value;
+    hqSel.innerHTML = '<option value="all">All HQs</option>' +
+      hqs.map(h => `<option value="${esc(h)}">${esc(h)}</option>`).join('');
+    if (prev && (prev === 'all' || hqs.includes(prev))) hqSel.value = prev;
+    hqSel.dataset.builtFor = String(records.length);
+  }
+
+  const sel = document.getElementById('hqRepeatCountFilter');
+  const filterVal = sel ? sel.value : 'all';
+  const hqFilterVal = hqSel ? hqSel.value : 'all';
+
+  let filtered = records;
+  if (hqFilterVal !== 'all') filtered = filtered.filter(r => r.hq === hqFilterVal);
+  if (filterVal === '1')       filtered = filtered.filter(r => r.count === 1);
+  else if (filterVal === '2')  filtered = filtered.filter(r => r.count === 2);
+  else if (filterVal === '3')  filtered = filtered.filter(r => r.count === 3);
+  else if (filterVal === '4')  filtered = filtered.filter(r => r.count === 4);
+  else if (filterVal === '2+') filtered = filtered.filter(r => r.count >= 2);
+  else if (filterVal === '5+') filtered = filtered.filter(r => r.count >= 5);
+  // 'all' → no count filtering
+
+  if (!filtered.length) {
+    repeatBody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--muted);">No names match this filter.</td></tr>';
+    return;
+  }
+  repeatBody.innerHTML = filtered.map((r, i) => `<tr>
+    <td class="p-sno">${i + 1}</td>
+    <td class="hq-col">${esc(r.name)}</td>
+    <td class="hq-col" style="color:var(--muted);">${esc(r.hq)}</td>
+    <td class="hq-col"><span class="desg-badge ${r.desg==='ALP'||r.desg==='SR ALP'?'desg-alp':'desg-other'}">${esc(r.desg)}</span></td>
+    <td style="color:${r.count>1?'var(--signal-yellow)':'var(--muted)'};font-weight:${r.count>1?'700':'400'};">${r.count}</td>
+  </tr>`).join('');
+}
+
+
+// ── Detail Summary state ──
+let detailFilter = 'all';
+
+function setDetailFilter(f) {
+  detailFilter = f;
+  ['All','Pending','DSOnly','DSNot','RSOnly','RSNot','Both'].forEach(id => {
+    const el = document.getElementById('dsFilt' + id);
+    if (el) el.classList.remove('active');
+  });
+  const map = { all:'All', pending:'Pending', ds_only:'DSOnly', ds_not:'DSNot', rs_only:'RSOnly', rs_not:'RSNot', both:'Both' };
+  const el = document.getElementById('dsFilt' + map[f]);
+  if (el) el.classList.add('active');
+  buildDetailSummary();
+}
+
+function buildDetailSummary() {
+  const tbody = document.getElementById('detailSummaryBody');
+  if (!tbody) return;
+  if (!hqAllCrew || hqAllCrew.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="padding:30px;text-align:center;color:var(--muted);">No roster data. Click ⟳ Refresh.</td></tr>';
+    return;
+  }
+
+  const selHQ   = (document.getElementById('dsDetailHQFilter').value  || '').trim();
+  const selDesg = (document.getElementById('dsDetailDesgFilter').value || '').trim();
+  const selRS   = (document.getElementById('dsDetailRSFilter').value   || '').trim();
+  const selDS   = (document.getElementById('dsDetailDSFilter').value   || '').trim();
+
+  // Populate Designation dropdown from current HQ selection (if not already populated)
+  const desgSel = document.getElementById('dsDetailDesgFilter');
+  const prevDesg = desgSel.value;
+  const desgPool = selHQ
+    ? hqAllCrew.filter(c => c.hq.trim() === selHQ)
+    : hqAllCrew;
+  const desgSet = [...new Set(desgPool.map(c => c.desg).filter(d => d && d !== '—'))].sort();
+  desgSel.innerHTML = '<option value="">🏷 All Designations</option>' +
+    desgSet.map(d => `<option value="${esc(d)}"${d === prevDesg ? ' selected' : ''}>${esc(d)}</option>`).join('');
+
+  // Build done sets from cache
+  const dsDoneSet = new Set();
+  const rsDoneSet = new Set();
+
+  if (cache.ds && cache.ds.rows) {
+    const crewCol = RESOLVED.ds.crew;
+    if (crewCol) cache.ds.rows.forEach(row => {
+      const nm = (row[crewCol] || '').trim();
+      if (nm) dsDoneSet.add(nm);
+    });
+  }
+  if (cache.rs && cache.rs.rows) {
+    const lpCol  = RESOLVED.rs.lp;
+    const alpCol = RESOLVED.rs.alp;
+    cache.rs.rows.forEach(row => {
+      [lpCol, alpCol].forEach(col => {
+        if (!col) return;
+        const nm = (row[col] || '').trim();
+        if (nm) rsDoneSet.add(nm);
+      });
+    });
+  }
+
+  // Filter roster
+  let data = hqAllCrew.filter(c => {
+    if (selHQ   && c.hq.trim()   !== selHQ)   return false;
+    if (selDesg && c.desg.trim() !== selDesg)  return false;
+    const dsDone = dsDoneSet.has(c.name);
+    const rsDone = rsDoneSet.has(c.name);
+    if (selRS === 'done' && !rsDone) return false;
+    if (selRS === 'not'  &&  rsDone) return false;
+    if (selDS === 'done' && !dsDone) return false;
+    if (selDS === 'not'  &&  dsDone) return false;
+    if (detailFilter === 'pending')  return !dsDone && !rsDone;
+    if (detailFilter === 'ds_only')  return dsDone;
+    if (detailFilter === 'ds_not')   return !dsDone;
+    if (detailFilter === 'rs_only')  return rsDone;
+    if (detailFilter === 'rs_not')   return !rsDone;
+    if (detailFilter === 'both')     return dsDone && rsDone;
+    return true;
+  });
+
+  // Sort by HQ then name
+  data = [...data].sort((a, b) => {
+    if (a.hq < b.hq) return -1;
+    if (a.hq > b.hq) return 1;
+    return a.name.localeCompare(b.name);
+  });
+
+  document.getElementById('dsDetailCount').textContent = data.length + ' crew shown';
+
+  if (!data.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="padding:30px;text-align:center;color:var(--muted);">No crew match current filter.</td></tr>';
+    return;
+  }
+
+  let html = '';
+  let lastHq = null;
+  let sno = 0;
+
+  data.forEach(c => {
+    if (c.hq !== lastHq) {
+      lastHq = c.hq;
+      html += `<tr class="detail-hq-group-header">
+        <td colspan="6">🏢 ${esc(c.hq)}</td>
+      </tr>`;
+    }
+    sno++;
+    const dsDone = dsDoneSet.has(c.name);
+    const rsDone = rsDoneSet.has(c.name);
+    const u = (c.desg || '').toUpperCase();
+    const badgeCls = u.includes('ALP') ? 'desg-alp' : u.includes('LP') ? 'desg-lp' : 'desg-other';
+    const dsCell = dsDone
+      ? '<span class="ds-status-done">✔ DONE</span>'
+      : '<span class="ds-status-notdone">✘ NOT DONE</span>';
+    const rsCell = rsDone
+      ? '<span class="ds-status-done">✔ DONE</span>'
+      : '<span class="ds-status-notdone">✘ NOT DONE</span>';
+    html += `<tr>
+      <td class="ds-sno">${sno}</td>
+      <td class="ds-name">${esc(c.name)}</td>
+      <td><span class="desg-badge ${badgeCls}">${esc(c.desg || '—')}</span></td>
+      <td class="ds-hq">${esc(c.hq)}</td>
+      <td style="text-align:center;">${rsCell}</td>
+      <td style="text-align:center;">${dsCell}</td>
+    </tr>`;
+  });
+
+  tbody.innerHTML = html;
+}
+
+function clearDetailFilters() {
+  document.getElementById('dsDetailHQFilter').value   = '';
+  document.getElementById('dsDetailDesgFilter').value = '';
+  document.getElementById('dsDetailRSFilter').value   = '';
+  document.getElementById('dsDetailDSFilter').value   = '';
+  setDetailFilter('all');
+}
+
+function hqRenderGrid(data, q) {
+  if (!data.length) {
+    document.getElementById('hqGrid').innerHTML = '<div class="hq-empty">No crew found matching current filters.</div>';
+    return;
+  }
+
+  // Group by HQ
+  const groups = {};
+  data.forEach(c => { if (!groups[c.hq]) groups[c.hq] = []; groups[c.hq].push(c); });
+  const sortedHQs = Object.keys(groups).sort();
+
+  const hlText = (text) => {
+    if (!q) return esc(text);
+    const re = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + ')', 'gi');
+    return esc(text).replace(re, '<mark style="background:#ffd70033;color:var(--amber);border-radius:2px;">$1</mark>');
+  };
+
+  const desgBadge = (d) => {
+    const u = d.toUpperCase();
+    const cls = (u.includes('ALP')) ? 'desg-alp' : u.includes('LP') ? 'desg-lp' : 'desg-other';
+    return `<span class="desg-badge ${cls}">${esc(d)}</span>`;
+  };
+
+  let html = '';
+  sortedHQs.forEach(hq => {
+    const crew = groups[hq];
+    const bid  = 'hqbody_' + hq.replace(/\W/g, '_');
+    html += `
+    <div class="hq-card">
+      <div class="hq-card-header" onclick="hqToggle('${bid}', this)">
+        <span class="hq-card-name">🏢 ${hlText(hq)}</span>
+        <span style="display:flex;align-items:center;gap:8px;">
+          <span class="hq-card-count">${crew.length}</span>
+          <span class="hq-card-chevron" id="chv_${bid}">▼</span>
+        </span>
+      </div>
+      <div class="hq-card-body" id="${bid}">
+        <table class="hq-crew-table">
+          <thead>
+            <tr>
+              <th style="width:32px;">#</th>
+              <th>CREW NAME</th>
+              <th>CMS ID</th>
+              <th>DESIGNATION</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${crew.map((c, i) => `
+            <tr>
+              <td class="sno-td">${i + 1}</td>
+              <td class="name-td">${hlText(c.name)}</td>
+              <td class="cms-td">${hlText(c.cmsid) || '<span style="color:var(--muted)">—</span>'}</td>
+              <td>${desgBadge(c.desg)}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+  });
+
+  document.getElementById('hqGrid').innerHTML = html;
+}
+
+// ── Export HQ Wise Designation Breakdown as PDF ──
+function generateHqPDF() {
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    alert('PDF library not loaded. Check internet connection.'); return;
+  }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  let y = 40;
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.text('RAIPUR DIVISION — HQ WISE DESIGNATION BREAKDOWN', pageWidth / 2, y, { align: 'center' });
+  y += 16;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.text('Generated: ' + new Date().toLocaleString('en-IN') + '  |  DS = Danger Signal Counselling  |  RS = RS Practice', pageWidth / 2, y, { align: 'center' });
+  y += 22;
+
+  function normalizeDesg(d) {
+    const u = (d || '').toUpperCase().trim();
+    if (!u || u === '—') return 'OTHER';
+    if (/SR[\.\s]*ALP|SENIOR[\s]*ALP/.test(u)) return 'SR ALP';
+    if (/LPM/.test(u)) return 'LPM';
+    if (/LPP/.test(u)) return 'LPP';
+    if (/\bALP\b|ASST[\.\s]*LP|ASSISTANT[\s]*LOCO/.test(u)) return 'ALP';
+    if (/\bLP\b|LOCO[\s]*PILOT/.test(u)) return 'LP';
+    return u.length > 12 ? u.slice(0, 12) : u;
+  }
+  const DESG_ORDER = ['LP', 'ALP', 'SR ALP', 'LPP', 'LPM'];
+
+  function normName(s) {
+    return String(s || '').toUpperCase().replace(/[.\-_]/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+
+  const hqDesgMap = {};
+  const nameToHq  = {}, nameToDesg = {}, normToOrig = {};
+  hqAllCrew.forEach(c => {
+    const hq=c.hq.trim(), desg=normalizeDesg(c.desg), name=c.name.trim(), nrm=normName(name);
+    if (!hqDesgMap[hq]) hqDesgMap[hq]={};
+    if (!hqDesgMap[hq][desg]) hqDesgMap[hq][desg]=new Set();
+    hqDesgMap[hq][desg].add(name);
+    nameToHq[nrm]=hq; nameToDesg[nrm]=desg; normToOrig[nrm]=name;
+  });
+
+  function findHqCol(cols) { return (cols||[]).find(c=>/\bhq\b|home.?station|lobby|headquarter/i.test(c))||null; }
+  function findLpCol(cols) { return (cols||[]).find(c=>/\blp\b/i.test(c)&&!/alp|cms|hq/i.test(c))||null; }
+  function findAlpCol(cols){ return (cols||[]).find(c=>/\balp\b/i.test(c)&&!/cms|hq/i.test(c))||null; }
+  function addCount(store, hq, desg, name) {
+    if (!hq||!name) return;
+    if (!store[hq]) store[hq]={};
+    if (!store[hq][desg]) store[hq][desg]=new Set();
+    store[hq][desg].add(name);
+  }
+
+  const dsNames={}, rsNames={};
+  if (cache.ds && cache.ds.rows) {
+    const hqCol=(findHqCol(cache.ds.cols)), crewCol=RESOLVED.ds.crew;
+    cache.ds.rows.forEach(row => {
+      const nm=crewCol?(row[crewCol]||'').trim():''; if (!nm) return;
+      const nrm=normName(nm);
+      let hq=hqCol?(row[hqCol]||'').trim():'';
+      if (!hq) hq=nameToHq[nrm]||'';
+      addCount(dsNames, hq, nameToDesg[nrm]||'OTHER', normToOrig[nrm]||nm);
+    });
+  }
+  if (cache.rs && cache.rs.rows) {
+    const hqCol=findHqCol(cache.rs.cols), alpCol=findAlpCol(cache.rs.cols)||RESOLVED.rs.alp;
+    cache.rs.rows.forEach(row => {
+      // ALP-only, same as the on-screen HQ Wise Summary — LP name column excluded,
+      // and only ALP / SR ALP roster designations are bucketed (no phantom LP rows).
+      [alpCol].forEach(col => {
+        if (!col) return;
+        const nm=(row[col]||'').trim(); if (!nm) return;
+        const nrm=normName(nm);
+        let hq=hqCol?(row[hqCol]||'').trim():'';
+        if (!hq) hq=nameToHq[nrm]||'';
+        const desg = nameToDesg[nrm]||'OTHER';
+        if (desg !== 'ALP' && desg !== 'SR ALP') return; // skip LP-family designation mismatches
+        addCount(rsNames, hq, desg, normToOrig[nrm]||nm);
+      });
+    });
+  }
+
+  const pctStr = (done, total) => total ? Math.round(done/total*100)+'%' : '—';
+
+  const bodyRows = [];
+  let gTotal=0, gDS=0, gRS=0, gBoth=0, gPending=0;
+
+  Object.keys(hqDesgMap).sort().forEach(hq => {
+    const desgMap = hqDesgMap[hq];
+    const hqDesgs = [...DESG_ORDER.filter(d=>desgMap[d]), ...Object.keys(desgMap).filter(d=>!DESG_ORDER.includes(d)).sort()];
+    let hqTotal=0, hqDS=0, hqRS=0, hqBoth=0, hqPending=0;
+    hqDesgs.forEach(desg => {
+      const crewSet=desgMap[desg]||new Set();
+      const dsSet=(dsNames[hq]&&dsNames[hq][desg])||new Set();
+      const rsSet=(rsNames[hq]&&rsNames[hq][desg])||new Set();
+      const total=crewSet.size, dsDone=dsSet.size, rsDone=rsSet.size;
+      let bothDone=0; dsSet.forEach(n=>{if(rsSet.has(n))bothDone++;});
+      const pending=Math.max(0,total-Math.max(dsDone,rsDone,bothDone));
+      hqTotal+=total; hqDS+=dsDone; hqRS+=rsDone; hqBoth+=bothDone; hqPending+=pending;
+      bodyRows.push([hq, desg, total, dsDone, pctStr(dsDone,total), rsDone, pctStr(rsDone,total), bothDone, pctStr(bothDone,total), pending]);
+    });
+    gTotal+=hqTotal; gDS+=hqDS; gRS+=hqRS; gBoth+=hqBoth; gPending+=hqPending;
+    bodyRows.push(['↳ '+hq+' TOTAL', hqDesgs.length+' desig.', hqTotal, hqDS, pctStr(hqDS,hqTotal), hqRS, pctStr(hqRS,hqTotal), hqBoth, pctStr(hqBoth,hqTotal), hqPending]);
+  });
+  bodyRows.push(['GRAND TOTAL', Object.keys(hqDesgMap).length+' HQs', gTotal, gDS, pctStr(gDS,gTotal), gRS, pctStr(gRS,gTotal), gBoth, pctStr(gBoth,gTotal), gPending]);
+
+  doc.autoTable({
+    startY: y,
+    head: [['HQ','DESIGNATION','TOTAL CREW','DS DONE','DS %','RS DONE','RS %','BOTH DONE','BOTH %','PENDING']],
+    body: bodyRows,
+    styles: { fontSize: 8, cellPadding: 4 },
+    headStyles: { fillColor: [8, 21, 32], textColor: [0, 212, 255], fontStyle: 'bold', fontSize: 7.5 },
+    columnStyles: {
+      0: { fontStyle:'bold' },
+      2: { halign:'center', textColor:[255,255,255], fontStyle:'bold' },
+      3: { halign:'center', textColor:[224,65,63],   fontStyle:'bold' },
+      4: { halign:'center', textColor:[224,65,63] },
+      5: { halign:'center', textColor:[43,182,115],  fontStyle:'bold' },
+      6: { halign:'center', textColor:[43,182,115] },
+      7: { halign:'center', textColor:[240,180,41],  fontStyle:'bold' },
+      8: { halign:'center', textColor:[240,180,41] },
+      9: { halign:'center', textColor:[200,80,80] }
+    },
+    didParseCell: function(data) {
+      const txt = String(data.row.raw[0]);
+      if (txt.startsWith('↳')) { data.cell.styles.fillColor=[13,30,42]; data.cell.styles.fontStyle='bold'; }
+      if (txt === 'GRAND TOTAL') { data.cell.styles.fillColor=[8,21,32]; data.cell.styles.fontStyle='bold'; data.cell.styles.textColor=[240,180,41]; }
+    },
+    margin: { left:30, right:30 },
+    theme: 'grid'
+  });
+
+  doc.save('HQ_Designation_Breakdown_'+new Date().toISOString().slice(0,10)+'.pdf');
+}
+
+// ── Show pending crew modal for HQ Wise Summary ──
+function showHqPendingModal(crewList, hq, desg) {
+  const modal = document.getElementById('pendingModal');
+  const title = document.getElementById('pendingModalTitle');
+  const meta  = document.getElementById('pendingModalMeta');
+  const tbody = document.getElementById('pendingModalBody');
+
+  title.textContent = '⏳ PENDING CREW — ' + hq + (desg !== 'ALL' ? ' / ' + desg : '');
+  meta.textContent  = crewList.length + ' crew pending (neither DS nor RS done)';
+
+  let rows = '';
+  crewList.sort().forEach((name, i) => {
+    // Look up CMS ID and designation from hqAllCrew roster
+    const rec = hqAllCrew.find(c => c.name === name);
+    const cms  = rec ? rec.cmsid || '—' : '—';
+    const dsg  = rec ? rec.desg  || '—' : '—';
+    const u = (dsg || '').toUpperCase();
+    const badgeCls = u.includes('ALP') ? 'desg-alp' : u.includes('LP') ? 'desg-lp' : 'desg-other';
+    rows += `<tr>
+      <td class="p-sno">${i + 1}</td>
+      <td class="p-name">${esc(name)}</td>
+      <td class="p-cms">${esc(cms)}</td>
+      <td class="p-desg"><span class="desg-badge ${badgeCls}">${esc(dsg)}</span></td>
+      <td class="p-status"><span style="color:var(--signal-red);font-size:11px;">⛔ Neither DS nor RS</span></td>
+    </tr>`;
+  });
+
+  tbody.innerHTML = rows || '<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--muted);">No pending crew found.</td></tr>';
+  document.getElementById('pendingModalFooter').textContent = crewList.length + ' pending · HQ: ' + hq + ' · Desg: ' + desg;
+  modal.style.display = 'block';
+}
+
+function closePendingModal() {
+  document.getElementById('pendingModal').style.display = 'none';
+}
+
+function hqToggle(bodyId, headerEl) {
+  const body = document.getElementById(bodyId);
+  const chv  = document.getElementById('chv_' + bodyId);
+  const isOpen = body.classList.toggle('open');
+  if (chv) chv.style.transform = isOpen ? 'rotate(180deg)' : '';
+}
+
+function hqExpandAll() {
+  document.querySelectorAll('.hq-card-body').forEach(el => el.classList.add('open'));
+  document.querySelectorAll('.hq-card-chevron').forEach(el => el.style.transform = 'rotate(180deg)');
+}
+function hqCollapseAll() {
+  document.querySelectorAll('.hq-card-body').forEach(el => el.classList.remove('open'));
+  document.querySelectorAll('.hq-card-chevron').forEach(el => el.style.transform = '');
+}
+</script>
+</body>
+</html>
