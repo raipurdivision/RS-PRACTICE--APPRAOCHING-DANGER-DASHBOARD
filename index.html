@@ -799,6 +799,7 @@
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -1106,6 +1107,7 @@
         <option value="">All Designations</option>
       </select>
       <button class="hq-action-btn cyan" onclick="hqFetchData()">⟳ Refresh</button>
+      <button class="hq-action-btn" style="border-color:#2ecc71;color:#2ecc71;" onclick="showCoverageModal()">🆔 Covered / Uncovered</button>
       <button class="hq-action-btn" onclick="hqExpandAll()">▼ Expand All</button>
       <button class="hq-action-btn" onclick="hqCollapseAll()">▲ Collapse All</button>
       <div class="hq-status">
@@ -1297,6 +1299,61 @@
   </div>
 </div>
 
+<!-- ── ALP ID Covered / Uncovered Modal ── -->
+<div id="coverageModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.82);z-index:9999;overflow:auto;padding:30px 16px;animation:fadeInModal .18s ease;" onclick="if(event.target===this)closeCoverageModal()">
+  <div class="pending-modal-box" style="max-width:820px;">
+    <div class="pending-modal-header">
+      <div>
+        <div class="pending-modal-title" id="coverageModalTitle">🆔 ID COVERAGE — ROSTER vs DATA SHEET</div>
+        <div class="pending-modal-meta" id="coverageModalMeta"></div>
+      </div>
+      <button class="pending-modal-close" onclick="closeCoverageModal()">✕ Close</button>
+    </div>
+
+    <!-- STEP 1: choose which report to check coverage for -->
+    <div id="coverageTypeChooser" style="padding:26px 20px;text-align:center;">
+      <div style="color:var(--muted);font-size:13px;margin-bottom:16px;">Select which report to check ID coverage for:</div>
+      <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;">
+        <button class="hq-action-btn" style="border-color:#2ecc71;color:#2ecc71;font-size:14px;padding:14px 22px;" onclick="loadCoverage('rs')">
+          🛠 RS Practice<br><span style="font-size:10.5px;color:var(--muted);font-weight:400;">ALP crew only</span>
+        </button>
+        <button class="hq-action-btn" style="border-color:var(--signal-red);color:var(--signal-red);font-size:14px;padding:14px 22px;" onclick="loadCoverage('ds')">
+          ⛔ Approaching Danger<br><span style="font-size:10.5px;color:var(--muted);font-weight:400;">LP + ALP crew</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- STEP 2: covered / uncovered results for the chosen report -->
+    <div id="coverageResultsWrap" style="display:none;">
+      <div style="display:flex;gap:8px;padding:12px 16px 0;flex-wrap:wrap;align-items:center;">
+        <button class="hq-action-btn" style="padding:6px 10px;font-size:11px;" onclick="showCoverageChooser()">◀ Change Report</button>
+        <button class="role-chip active-alp" id="covTabCovered" onclick="setCoverageTab('covered')">✅ Covered (<span id="covCountCovered">0</span>)</button>
+        <button class="role-chip" id="covTabUncovered" onclick="setCoverageTab('uncovered')">❌ Uncovered (<span id="covCountUncovered">0</span>)</button>
+        <input type="text" class="hq-search" id="coverageSearch" placeholder="🔍  Search name / ID / HQ…" oninput="renderCoverageModal()" style="flex:1;min-width:160px;">
+      </div>
+      <div style="display:flex;gap:8px;padding:10px 16px 0;flex-wrap:wrap;">
+        <button class="hq-pdf-btn" onclick="generateCoveragePDF()">📄 Generate PDF</button>
+        <button class="hq-pdf-btn" style="background:#1a3a2a;border-color:#2ecc71;color:#2ecc71;" onclick="downloadCoverageExcel()">📊 Download Excel</button>
+      </div>
+      <div class="pending-modal-body">
+        <table class="pending-modal-table">
+          <thead>
+            <tr>
+              <th style="width:36px;text-align:center;">#</th>
+              <th>NAME</th>
+              <th>ALP / LP ID</th>
+              <th>DESIGNATION</th>
+              <th>HQ / LOBBY</th>
+            </tr>
+          </thead>
+          <tbody id="coverageModalBody"></tbody>
+        </table>
+      </div>
+      <div class="pending-modal-footer" id="coverageModalFooter"></div>
+    </div>
+  </div>
+</div>
+
 </div>
 
 <script>
@@ -1323,7 +1380,9 @@ function resolveColumns() {
   RESOLVED.ds = {
     cli:  findCol(cache.ds && cache.ds.cols, ['cli']),
     crew: findCol(cache.ds && cache.ds.cols, ['crew'], ['cms', 'designation']),
-    hq:   findCol(cache.ds && cache.ds.cols, ['hq'])
+    hq:   findCol(cache.ds && cache.ds.cols, ['hq']),
+    // ID column — used by the Covered/Uncovered (Approaching Danger) matcher.
+    id:   findCol(cache.ds && cache.ds.cols, ['id'], ['hq', 'cli'])
   };
   RESOLVED.rs = {
     cli:   findCol(cache.rs && cache.rs.cols, ['cli']),
@@ -1331,7 +1390,14 @@ function resolveColumns() {
     alp:   findCol(cache.rs && cache.rs.cols, ['alp'], ['cms', 'hq']),
     lpHq:  findCol(cache.rs && cache.rs.cols, ['lp', 'hq'], ['alp']),
     alpHq: findCol(cache.rs && cache.rs.cols, ['alp', 'hq']),
-    hq:    findCol(cache.rs && cache.rs.cols, ['hq'])
+    hq:    findCol(cache.rs && cache.rs.cols, ['hq']),
+    // ID columns — used by the Covered/Uncovered (ALP ID) matcher. Looks for
+    // an explicit "ALP ID" / "LP ID" column first, and falls back to a single
+    // generic "ID" column (e.g. CMS ID) shared by both roles if the sheet
+    // doesn't separate them.
+    alpId: findCol(cache.rs && cache.rs.cols, ['alp', 'id'], ['hq']),
+    lpId:  findCol(cache.rs && cache.rs.cols, ['lp', 'id'],  ['alp', 'hq']),
+    genId: findCol(cache.rs && cache.rs.cols, ['id'], ['hq', 'lp', 'alp', 'cli'])
   };
 }
 
@@ -3360,6 +3426,244 @@ function showHqPendingModal(crewList, hq, desg) {
 function closePendingModal() {
   document.getElementById('pendingModal').style.display = 'none';
 }
+
+// ═══════════════════════════════════════════════════════════════════════
+// ── ID COVERAGE — match roster crew ID against a data sheet ──
+// Roster sheet = hqAllCrew (name, cmsid, hq, desg) — the crew's CMS ID /
+// LP-ALP ID as recorded in the roster sheet.
+//
+// Two report types:
+//  • "rs" RS Practice        — ALP crew ONLY, matched against the RS
+//                               Practice sheet's ID column(s).
+//  • "ds" Approaching Danger — BOTH LP and ALP crew, matched against the
+//                               Danger Signal (DS) sheet's ID column.
+//
+// A roster crew member is COVERED if their ID appears anywhere in the
+// relevant data sheet, UNCOVERED otherwise. Matching is case-insensitive
+// and ignores surrounding whitespace — "abc123", "ABC123" and " Abc123 "
+// are treated as the same ID.
+// ═══════════════════════════════════════════════════════════════════════
+let coverageResult = { covered: [], uncovered: [] };
+let coverageTab  = 'covered';
+let coverageType = null;   // 'rs' | 'ds'
+
+function normId(v) {
+  return String(v == null ? '' : v).trim().toUpperCase();
+}
+
+function isAlpDesg(desg) {
+  const u = (desg || '').toUpperCase();
+  return u.includes('ALP');
+}
+
+function buildCoverageResult(type) {
+  const covered = [];
+  const uncovered = [];
+
+  if (!hqAllCrew || hqAllCrew.length === 0) return { covered, uncovered };
+
+  // Roster crew to check: RS Practice = ALP only; Approaching Danger = both LP and ALP (all roster crew).
+  const rosterCrew = type === 'rs' ? hqAllCrew.filter(c => isAlpDesg(c.desg)) : hqAllCrew;
+
+  // Collect every ID found in the relevant data sheet, from every
+  // ID-like column it has, across every row.
+  const dataIds = new Set();
+  if (type === 'rs' && cache.rs && cache.rs.rows) {
+    const c = RESOLVED.rs;
+    const idCols = [c.alpId, c.genId].filter(Boolean);   // ALP-only → don't pull in LP ID column
+    cache.rs.rows.forEach(row => {
+      idCols.forEach(col => {
+        const v = normId(row[col]);
+        if (v) dataIds.add(v);
+      });
+    });
+  } else if (type === 'ds' && cache.ds && cache.ds.rows) {
+    const c = RESOLVED.ds;
+    const idCols = [c.id].filter(Boolean);
+    cache.ds.rows.forEach(row => {
+      idCols.forEach(col => {
+        const v = normId(row[col]);
+        if (v) dataIds.add(v);
+      });
+    });
+  }
+
+  rosterCrew.forEach(crew => {
+    const id = normId(crew.cmsid);
+    const target = id && dataIds.has(id) ? covered : uncovered;
+    target.push(crew);
+  });
+
+  return { covered, uncovered };
+}
+
+function coverageIdColFound(type) {
+  return type === 'rs'
+    ? !!(RESOLVED.rs.alpId || RESOLVED.rs.genId)
+    : !!(RESOLVED.ds.id);
+}
+
+function coverageTypeLabel(type) {
+  return type === 'rs' ? '🛠 RS Practice (ALP only)' : '⛔ Approaching Danger (LP + ALP)';
+}
+
+function showCoverageChooser() {
+  coverageType = null;
+  document.getElementById('coverageTypeChooser').style.display = 'block';
+  document.getElementById('coverageResultsWrap').style.display = 'none';
+  document.getElementById('coverageModalMeta').textContent = '';
+}
+
+async function loadCoverage(type) {
+  coverageType = type;
+
+  if (!hqFetched) await hqFetchData();
+  if (type === 'rs' && !cache.rs) cache.rs = await fetchSheet('RS PRACTICE');
+  if (type === 'ds' && !cache.ds) cache.ds = await fetchSheet('APPROACHING DANGER COUNSELLING');
+  resolveColumns();
+
+  coverageResult = buildCoverageResult(type);
+  document.getElementById('covCountCovered').textContent   = coverageResult.covered.length;
+  document.getElementById('covCountUncovered').textContent = coverageResult.uncovered.length;
+
+  const total = coverageResult.covered.length + coverageResult.uncovered.length;
+  const idColFound = coverageIdColFound(type);
+  document.getElementById('coverageModalMeta').textContent =
+    coverageTypeLabel(type) + ' · ' + total + ' roster crew checked · ' +
+    coverageResult.covered.length + ' covered · ' + coverageResult.uncovered.length + ' uncovered' +
+    (idColFound ? '' : ' · ⚠ no ID column detected in the data sheet — all crew will show as uncovered');
+
+  coverageTab = 'covered';
+  document.getElementById('covTabCovered').className   = 'role-chip active-alp';
+  document.getElementById('covTabUncovered').className = 'role-chip';
+  document.getElementById('coverageSearch').value = '';
+
+  document.getElementById('coverageTypeChooser').style.display = 'none';
+  document.getElementById('coverageResultsWrap').style.display = 'block';
+
+  renderCoverageModal();
+}
+
+function setCoverageTab(tab) {
+  coverageTab = tab;
+  document.getElementById('covTabCovered').className   = 'role-chip' + (tab === 'covered'   ? ' active-alp' : '');
+  document.getElementById('covTabUncovered').className = 'role-chip' + (tab === 'uncovered' ? ' active-lp'  : '');
+  renderCoverageModal();
+}
+
+function coverageFilteredList() {
+  const q = (document.getElementById('coverageSearch').value || '').toLowerCase().trim();
+  return (coverageTab === 'covered' ? coverageResult.covered : coverageResult.uncovered)
+    .filter(c => !q || c.name.toLowerCase().includes(q) || (c.cmsid || '').toLowerCase().includes(q) || (c.hq || '').toLowerCase().includes(q))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function renderCoverageModal() {
+  const tbody = document.getElementById('coverageModalBody');
+  const list = coverageFilteredList();
+
+  let rows = '';
+  list.forEach((c, i) => {
+    const badgeCls = isAlpDesg(c.desg) ? 'desg-alp' : (c.desg || '').toUpperCase().includes('LP') ? 'desg-lp' : 'desg-other';
+    rows += `<tr>
+      <td class="p-sno">${i + 1}</td>
+      <td class="p-name">${esc(c.name)}</td>
+      <td class="p-cms">${esc(c.cmsid || '—')}</td>
+      <td class="p-desg"><span class="desg-badge ${badgeCls}">${esc(c.desg || '—')}</span></td>
+      <td>${esc(c.hq || '—')}</td>
+    </tr>`;
+  });
+
+  const emptyMsg = coverageTab === 'covered'
+    ? 'No covered crew found — no roster IDs matched the data sheet.'
+    : 'No uncovered crew found — every roster ID matched the data sheet.';
+  tbody.innerHTML = rows || `<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--muted);">${emptyMsg}</td></tr>`;
+
+  const q = (document.getElementById('coverageSearch').value || '').trim();
+  document.getElementById('coverageModalFooter').textContent =
+    list.length + (coverageTab === 'covered' ? ' covered' : ' uncovered') + ' crew shown' + (q ? ' (filtered)' : '');
+}
+
+async function showCoverageModal() {
+  showCoverageChooser();
+  document.getElementById('coverageModal').style.display = 'block';
+}
+
+function closeCoverageModal() {
+  document.getElementById('coverageModal').style.display = 'none';
+}
+
+// ── Export current Covered/Uncovered coverage report as PDF ──
+// Includes BOTH the Covered and Uncovered lists (full report), not just the active tab.
+function generateCoveragePDF() {
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    alert('PDF library not loaded. Check internet connection.'); return;
+  }
+  if (!coverageType) { alert('Choose a report type first.'); return; }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+  doc.setTextColor(0, 0, 0);
+  const pageWidth = doc.internal.pageSize.getWidth();
+
+  let y = 32;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(13);
+  doc.text('RAIPUR DIVISION — ID COVERAGE REPORT', pageWidth / 2, y, { align: 'center' });
+  y += 16;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.text(coverageTypeLabel(coverageType) + '  |  Generated: ' + new Date().toLocaleString('en-IN'), pageWidth / 2, y, { align: 'center' });
+  y += 10;
+
+  const sections = [
+    { title: '✅ COVERED (' + coverageResult.covered.length + ')', rows: coverageResult.covered },
+    { title: '❌ UNCOVERED (' + coverageResult.uncovered.length + ')', rows: coverageResult.uncovered }
+  ];
+
+  sections.forEach(sec => {
+    y += 18;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.text(sec.title, 24, y);
+    const body = [...sec.rows].sort((a, b) => a.name.localeCompare(b.name))
+      .map((c, i) => [i + 1, c.name, c.cmsid || '—', c.desg || '—', c.hq || '—']);
+    doc.autoTable({
+      startY: y + 8,
+      head: [['S.NO', 'NAME', 'ID', 'DESIGNATION', 'HQ']],
+      body: body.length ? body : [['—', 'No crew in this category', '', '', '']],
+      styles: { fontSize: 8.5, cellPadding: 4 },
+      headStyles: { fillColor: [20, 30, 40], textColor: 255 },
+      margin: { left: 24, right: 24 },
+      theme: 'grid'
+    });
+    y = doc.lastAutoTable.finalY;
+  });
+
+  doc.save('ID_Coverage_' + coverageType + '_' + new Date().toISOString().slice(0, 10) + '.pdf');
+}
+
+// ── Export current Covered/Uncovered coverage report as Excel (.xlsx) ──
+// Includes BOTH the Covered and Uncovered lists as two separate sheets.
+function downloadCoverageExcel() {
+  if (!window.XLSX) {
+    alert('Excel library not loaded. Check internet connection.'); return;
+  }
+  if (!coverageType) { alert('Choose a report type first.'); return; }
+
+  const toRows = list => [...list].sort((a, b) => a.name.localeCompare(b.name))
+    .map((c, i) => ({ 'S.NO': i + 1, 'NAME': c.name, 'ID': c.cmsid || '—', 'DESIGNATION': c.desg || '—', 'HQ / LOBBY': c.hq || '—' }));
+
+  const wb = XLSX.utils.book_new();
+  const wsCovered   = XLSX.utils.json_to_sheet(toRows(coverageResult.covered));
+  const wsUncovered = XLSX.utils.json_to_sheet(toRows(coverageResult.uncovered));
+  XLSX.utils.book_append_sheet(wb, wsCovered, 'Covered');
+  XLSX.utils.book_append_sheet(wb, wsUncovered, 'Uncovered');
+
+  XLSX.writeFile(wb, 'ID_Coverage_' + coverageType + '_' + new Date().toISOString().slice(0, 10) + '.xlsx');
+}
+
+
 
 function hqToggle(bodyId, headerEl) {
   const body = document.getElementById(bodyId);
