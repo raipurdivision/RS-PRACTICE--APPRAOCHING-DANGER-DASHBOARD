@@ -7,6 +7,8 @@
 
 
 
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -313,6 +315,30 @@
   .role-chip.active-all   { border-color: var(--signal-yellow); color: var(--signal-yellow); background: #1a160a; }
   .role-chip.active-lp    { border-color: #4d8fd6; color: #4d8fd6; background: #0d1e30; }
   .role-chip.active-alp   { border-color: #2ecc71; color: #2ecc71; background: #0d2b1e; }
+
+  /* ── LP/ALP HQ multi-select dropdown ── */
+  .hq-multiselect { position: relative; display: inline-block; }
+  .hq-dropdown-btn {
+    padding: 5px 14px; border-radius: 20px; border: 1px solid #9b59b6;
+    font-size: 12px; cursor: pointer; background: #1c1230; color: #c9a3e8;
+    transition: all 0.15s; display: inline-flex; align-items: center; gap: 6px;
+  }
+  .hq-dropdown-btn:hover { border-color: #b57ae0; color: #e0c3f5; }
+  .hq-dropdown-btn.has-selection { border-color: #9b59b6; color: #e0c3f5; background: #2a1a42; }
+  .hq-dropdown-panel {
+    position: absolute; top: calc(100% + 6px); left: 0; z-index: 40;
+    background: var(--panel-2); border: 1px solid #9b59b6; border-radius: 8px;
+    padding: 8px; min-width: 190px; max-height: 260px; overflow-y: auto;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+  }
+  .hq-dropdown-item {
+    display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 5px;
+    font-size: 12.5px; color: var(--text); cursor: pointer; white-space: nowrap;
+  }
+  .hq-dropdown-item:hover { background: #241535; }
+  .hq-dropdown-item input[type="checkbox"] { accent-color: #9b59b6; cursor: pointer; }
+  .hq-dropdown-divider { height: 1px; background: var(--line); margin: 6px 2px; }
+  .hq-dropdown-empty { padding: 10px 8px; font-size: 12px; color: var(--muted); }
 
   .tab-content { display: none; }
   .tab-content.active { display: block; }
@@ -847,6 +873,18 @@
           <option value="">— All Crew —</option>
         </select>
       </div>
+
+      <div class="divider"></div>
+
+      <!-- Search by LP/ALP ID -->
+      <div class="filter-group">
+        <label>Search by ID :</label>
+        <input type="text" class="date-input" id="idSearchInput" placeholder="e.g. 12345"
+               style="width:140px;text-transform:uppercase;"
+               onkeydown="if(event.key==='Enter'){event.preventDefault(); searchById();}">
+        <button class="refresh-btn" onclick="searchById()" style="border-color:#9b59b6;color:#c9a3e8;">🔎 Search</button>
+        <span id="idSearchStatus" style="font-size:11.5px;color:var(--muted);"></span>
+      </div>
     </div>
 
     <!-- Row 3: Actions -->
@@ -995,6 +1033,21 @@
       <button class="role-chip active-all" id="chipAll" onclick="setLpRoleFilter('all')">All Crew</button>
       <button class="role-chip" id="chipLP"  onclick="setLpRoleFilter('LP')">LP Only</button>
       <button class="role-chip" id="chipALP" onclick="setLpRoleFilter('ALP')">ALP Only</button>
+
+      <div class="hq-multiselect" id="lpHqMultiSelect">
+        <button type="button" class="hq-dropdown-btn" id="lpHqDropdownBtn" onclick="toggleLpHqDropdown(event)">
+          📍 Select HQ <span id="lpHqSelectedLabel">(All)</span> ▾
+        </button>
+        <div class="hq-dropdown-panel" id="lpHqDropdownPanel" style="display:none;">
+          <label class="hq-dropdown-item">
+            <input type="checkbox" id="lpHqAllChk" checked onchange="toggleLpHqAll(this)"> All HQ
+          </label>
+          <div class="hq-dropdown-divider"></div>
+          <div id="lpHqOptionsList">
+            <div class="hq-dropdown-empty">Loading HQ list…</div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Legend -->
@@ -1019,7 +1072,8 @@
           <tr>
             <th class="num">S.NO</th>
             <th>NAME</th>
-            <th class="num">ROLE</th>
+            <th>LP/ALP ID</th>
+            <th class="num">DESIGNATION</th>
             <th class="num">APPROACHING SIGNAL<br><span style="color:var(--signal-red);font-size:10px;">(Danger Counselling)</span></th>
             <th class="num">RS PRACTICE</th>
             <th class="num">TOTAL</th>
@@ -1027,7 +1081,7 @@
           </tr>
         </thead>
         <tbody id="lpReportBody">
-          <tr><td colspan="7" style="padding:40px;text-align:center;color:var(--muted);">Loading data…</td></tr>
+          <tr><td colspan="8" style="padding:40px;text-align:center;color:var(--muted);">Loading data…</td></tr>
         </tbody>
       </table>
     </div>
@@ -1268,12 +1322,16 @@ function findCol(cols, mustInclude, mustExclude) {
 function resolveColumns() {
   RESOLVED.ds = {
     cli:  findCol(cache.ds && cache.ds.cols, ['cli']),
-    crew: findCol(cache.ds && cache.ds.cols, ['crew'], ['cms', 'designation'])
+    crew: findCol(cache.ds && cache.ds.cols, ['crew'], ['cms', 'designation']),
+    hq:   findCol(cache.ds && cache.ds.cols, ['hq'])
   };
   RESOLVED.rs = {
-    cli: findCol(cache.rs && cache.rs.cols, ['cli']),
-    lp:  findCol(cache.rs && cache.rs.cols, ['lp'],  ['alp', 'cms', 'hq']),
-    alp: findCol(cache.rs && cache.rs.cols, ['alp'], ['cms', 'hq'])
+    cli:   findCol(cache.rs && cache.rs.cols, ['cli']),
+    lp:    findCol(cache.rs && cache.rs.cols, ['lp'],  ['alp', 'cms', 'hq']),
+    alp:   findCol(cache.rs && cache.rs.cols, ['alp'], ['cms', 'hq']),
+    lpHq:  findCol(cache.rs && cache.rs.cols, ['lp', 'hq'], ['alp']),
+    alpHq: findCol(cache.rs && cache.rs.cols, ['alp', 'hq']),
+    hq:    findCol(cache.rs && cache.rs.cols, ['hq'])
   };
 }
 
@@ -1639,6 +1697,52 @@ function clearFilters() {
   document.getElementById('sheetSelector').value = 'both';
   document.getElementById('fromDate').value = '';
   document.getElementById('toDate').value = '';
+  document.getElementById('idSearchInput').value = '';
+  document.getElementById('idSearchStatus').textContent = '';
+  applyFilters();
+}
+
+// ── Search dashboard by LP/ALP ID (CMS ID from crew roster) ──
+async function searchById() {
+  const inputEl  = document.getElementById('idSearchInput');
+  const statusEl = document.getElementById('idSearchStatus');
+  const idVal    = (inputEl.value || '').trim();
+
+  if (!idVal) {
+    statusEl.textContent = '';
+    return;
+  }
+
+  // Roster (with CMS/LP-ALP IDs) may not be loaded yet — fetch it on demand.
+  if (!hqFetched) {
+    statusEl.style.color = 'var(--muted)';
+    statusEl.textContent = 'Loading crew roster…';
+    await hqFetchData();
+  }
+
+  const rec = (hqAllCrew || []).find(c => (c.cmsid || '').trim().toUpperCase() === idVal.toUpperCase());
+
+  if (!rec) {
+    statusEl.style.color = 'var(--signal-red)';
+    statusEl.textContent = '⚠ No crew found for ID "' + idVal + '"';
+    return;
+  }
+
+  statusEl.style.color = 'var(--signal-green)';
+  statusEl.textContent = '✓ Found: ' + rec.name + (rec.hq && rec.hq !== 'UNKNOWN' ? ' (' + rec.hq + ')' : '');
+
+  // Ensure the matched crew is selectable in the LP/ALP dropdown, even if
+  // they have no DS/RS records yet — then apply the same name-based filter
+  // the dropdown already uses.
+  const sel = document.getElementById('lpFilter');
+  let opt = [...sel.options].find(o => o.value === rec.name);
+  if (!opt) {
+    opt = document.createElement('option');
+    opt.value = rec.name;
+    opt.textContent = rec.name + ' (' + rec.cmsid + ')';
+    sel.appendChild(opt);
+  }
+  sel.value = rec.name;
   applyFilters();
 }
 
@@ -1653,22 +1757,23 @@ function generatePDFReport() {
 
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+  doc.setTextColor(0, 0, 0);
 
   const pageWidth = doc.internal.pageSize.getWidth();
-  let y = 40;
+  let y = 32;
 
   // Title
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(15);
+  doc.setFontSize(13);
   doc.text('RAIPUR DIVISION · CREW SAFETY COUNSELLING REPORT', pageWidth / 2, y, { align: 'center' });
-  y += 18;
+  y += 14;
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
+  doc.setFontSize(8.5);
   doc.text('Generated: ' + new Date().toLocaleString('en-IN'), pageWidth / 2, y, { align: 'center' });
-  y += 22;
+  y += 16;
 
   // Filter context
-  doc.setFontSize(10);
+  doc.setFontSize(8.5);
   const filterLines = [];
   if (f.cliVal)    filterLines.push('CLI Name: ' + f.cliVal);
   if (f.personVal) filterLines.push('Crew Name: ' + f.personVal);
@@ -1676,72 +1781,72 @@ function generatePDFReport() {
   if (f.toVal)     filterLines.push('To: '   + f.toVal.split('-').reverse().join('/'));
   if (filterLines.length) {
     doc.setFont('helvetica', 'bold');
-    doc.text(filterLines.join('   |   '), 40, y);
-    y += 18;
+    doc.text(filterLines.join('   |   '), 28, y);
+    y += 14;
   }
 
   // Total counts summary
   const totalBoth = f.dsLen + f.rsLen;
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
+  doc.setFontSize(9.5);
   doc.text(
     'Total Danger Signal Counsellings: ' + f.dsLen +
     '    |    Total RS Practice Sessions: ' + f.rsLen +
     '    |    Total (Both Sheets): ' + totalBoth,
-    40, y
+    28, y
   );
-  y += 20;
+  y += 16;
 
   // DS Table
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.text('APPROACHING DANGER COUNSELLING (' + f.dsLen + ' records)', 40, y);
-  y += 8;
+  doc.setFontSize(10.5);
+  doc.text('APPROACHING DANGER COUNSELLING (' + f.dsLen + ' records)', 28, y);
+  y += 6;
 
   if (f.ds.rows.length) {
     doc.autoTable({
       startY: y,
       head: [f.ds.cols],
       body: f.ds.rows.map(row => f.ds.cols.map(c => formatCellValue(c, row[c] !== undefined ? row[c] : ''))),
-      styles: { fontSize: 7, cellPadding: 3 },
-      headStyles: { fillColor: [224, 65, 63] },
-      margin: { left: 40, right: 40 },
+      styles: { fontSize: 6.5, cellPadding: 2, textColor: [0, 0, 0] },
+      headStyles: { fillColor: [225, 225, 225], textColor: [0, 0, 0], fontStyle: 'bold' },
+      margin: { left: 28, right: 28 },
       theme: 'grid'
     });
-    y = doc.lastAutoTable.finalY + 24;
+    y = doc.lastAutoTable.finalY + 18;
   } else {
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
-    doc.text('No records.', 40, y + 14);
-    y += 30;
+    doc.setFontSize(9);
+    doc.text('No records.', 28, y + 12);
+    y += 24;
   }
 
   // Page break before RS table if needed
   if (y > doc.internal.pageSize.getHeight() - 100) {
     doc.addPage();
-    y = 40;
+    y = 32;
   }
 
   // RS Table
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.text('RS PRACTICE (' + f.rsLen + ' records)', 40, y);
-  y += 8;
+  doc.setFontSize(10.5);
+  doc.text('RS PRACTICE (' + f.rsLen + ' records)', 28, y);
+  y += 6;
 
   if (f.rs.rows.length) {
     doc.autoTable({
       startY: y,
       head: [f.rs.cols],
       body: f.rs.rows.map(row => f.rs.cols.map(c => formatCellValue(c, row[c] !== undefined ? row[c] : ''))),
-      styles: { fontSize: 7, cellPadding: 3 },
-      headStyles: { fillColor: [43, 182, 115] },
-      margin: { left: 40, right: 40 },
+      styles: { fontSize: 6.5, cellPadding: 2, textColor: [0, 0, 0] },
+      headStyles: { fillColor: [225, 225, 225], textColor: [0, 0, 0], fontStyle: 'bold' },
+      margin: { left: 28, right: 28 },
       theme: 'grid'
     });
   } else {
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
-    doc.text('No records.', 40, y + 14);
+    doc.setFontSize(9);
+    doc.text('No records.', 28, y + 12);
   }
 
   const fnamePart = f.cliVal ? f.cliVal.replace(/[^a-z0-9]+/gi, '_') : 'all';
@@ -1855,10 +1960,13 @@ async function loadAll() {
   buildNameDropdown();
   buildCliDropdown();
   applyFilters();
+  // Kick off HQ roster fetch in the background (source of LP/ALP IDs for search) —
+  // don't block dashboard rendering on it.
+  if (!hqFetched) hqFetchData();
   // Rebuild CLI report if that tab is currently visible
   if (document.getElementById('tabContentCliReport').classList.contains('active')) buildCliReport();
   // Rebuild LP/ALP report if that tab is currently visible
-  if (document.getElementById('tabContentLpReport').classList.contains('active')) buildLpReport();
+  if (document.getElementById('tabContentLpReport').classList.contains('active')) { populateLpHqOptions(); buildLpReport(); }
   if (document.getElementById('tabContentHqReport').classList.contains('active')) buildHqSummaryTable(hqAllCrew);
 
   if (errors.length) {
@@ -1882,7 +1990,11 @@ function switchTab(tab) {
   document.getElementById('tabLpReport').classList.toggle('active', tab === 'lpReport');
   document.getElementById('tabHqReport').classList.toggle('active', tab === 'hqReport');
   if (tab === 'cliReport') buildCliReport();
-  if (tab === 'lpReport')  buildLpReport();
+  if (tab === 'lpReport')  {
+    populateLpHqOptions();
+    buildLpReport();
+    if (!hqFetched) hqFetchData().then(() => { populateLpHqOptions(); buildLpReport(); });
+  }
   if (tab === 'hqReport')  hqFetchData();
 }
 
@@ -1969,17 +2081,18 @@ function generateCliPDF() {
   }
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+  doc.setTextColor(0, 0, 0);
   const pageWidth = doc.internal.pageSize.getWidth();
 
-  let y = 40;
+  let y = 32;
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
+  doc.setFontSize(13);
   doc.text('RAIPUR DIVISION — CLI WISE DATA REPORT', pageWidth / 2, y, { align: 'center' });
-  y += 16;
+  y += 14;
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
+  doc.setFontSize(8.5);
   doc.text('Generated: ' + new Date().toLocaleString('en-IN'), pageWidth / 2, y, { align: 'center' });
-  y += 20;
+  y += 16;
 
   // Collect data
   const counts = new Map();
@@ -2006,22 +2119,22 @@ function generateCliPDF() {
     startY: y,
     head: [['S.NO', 'CLI NAME', 'APPROACHING SIGNAL\n(Danger Counselling)', 'RS PRACTICE', 'TOTAL']],
     body: body,
-    styles: { fontSize: 9, cellPadding: 5 },
-    headStyles: { fillColor: [74, 32, 96], textColor: [199, 125, 255], fontStyle: 'bold', fontSize: 8 },
+    styles: { fontSize: 8, cellPadding: 3, textColor: [0, 0, 0] },
+    headStyles: { fillColor: [225, 225, 225], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 7.5 },
     columnStyles: {
-      0: { halign: 'center', cellWidth: 35 },
-      2: { halign: 'center', textColor: [224, 65, 63], fontStyle: 'bold' },
-      3: { halign: 'center', textColor: [43, 182, 115], fontStyle: 'bold' },
-      4: { halign: 'center', textColor: [240, 180, 41], fontStyle: 'bold' }
+      0: { halign: 'center', cellWidth: 32 },
+      2: { halign: 'center', fontStyle: 'bold' },
+      3: { halign: 'center', fontStyle: 'bold' },
+      4: { halign: 'center', fontStyle: 'bold' }
     },
     didParseCell: function(data) {
       if (data.row.index === body.length - 1) {
-        data.cell.styles.fillColor = [26, 16, 48];
+        data.cell.styles.fillColor = [225, 225, 225];
         data.cell.styles.fontStyle = 'bold';
-        data.cell.styles.textColor = [240, 180, 41];
+        data.cell.styles.textColor = [0, 0, 0];
       }
     },
-    margin: { left: 40, right: 40 },
+    margin: { left: 28, right: 28 },
     theme: 'grid'
   });
 
@@ -2030,6 +2143,7 @@ function generateCliPDF() {
 
 // ── LP/ALP Wise Report state ──
 let lpRoleFilter = 'all';
+let lpHqFilter = new Set();   // empty set = All HQ
 
 function setLpRoleFilter(role) {
   lpRoleFilter = role;
@@ -2039,46 +2153,156 @@ function setLpRoleFilter(role) {
   buildLpReport();
 }
 
+// ── HQ multi-select dropdown for LP/ALP report ──
+// These HQ codes are always available in the dropdown, even before roster data loads
+// or if a particular HQ has no crew records yet.
+const LP_HQ_STATIC_OPTIONS = ['BSP', 'USL', 'SCLN', 'DGG', 'G', 'RIG'];
+
+function populateLpHqOptions() {
+  const list = document.getElementById('lpHqOptionsList');
+  if (!list) return;
+
+  const set = new Set(LP_HQ_STATIC_OPTIONS);
+
+  // From crew roster
+  (hqAllCrew || []).forEach(c => {
+    const h = (c.hq || '').trim().toUpperCase();
+    if (h && h !== 'UNKNOWN') set.add(h);
+  });
+
+  // From the sheets' own LP HQ / ALP HQ columns — this is the authoritative
+  // source, since a crew's roster HQ can be stale/out of sync with the sheet.
+  if (cache.ds) {
+    const c = RESOLVED.ds;
+    if (c.hq) cache.ds.rows.forEach(row => {
+      const h = (row[c.hq] || '').trim().toUpperCase();
+      if (h) set.add(h);
+    });
+  }
+  if (cache.rs) {
+    const c = RESOLVED.rs;
+    const lpHqCol  = c.lpHq  || c.hq;
+    const alpHqCol = c.alpHq || c.hq;
+    if (lpHqCol) cache.rs.rows.forEach(row => {
+      const h = (row[lpHqCol] || '').trim().toUpperCase();
+      if (h) set.add(h);
+    });
+    if (alpHqCol) cache.rs.rows.forEach(row => {
+      const h = (row[alpHqCol] || '').trim().toUpperCase();
+      if (h) set.add(h);
+    });
+  }
+
+  const hqs = [...set].sort();
+
+  list.innerHTML = hqs.map(hq => {
+    const checked = lpHqFilter.has(hq) ? 'checked' : '';
+    return `<label class="hq-dropdown-item">
+      <input type="checkbox" class="lpHqChk" value="${esc(hq)}" ${checked} onchange="onLpHqCheckboxChange()"> ${esc(hq)}
+    </label>`;
+  }).join('');
+  document.getElementById('lpHqAllChk').checked = lpHqFilter.size === 0;
+}
+
+function toggleLpHqDropdown(e) {
+  if (e) e.stopPropagation();
+  const panel = document.getElementById('lpHqDropdownPanel');
+  if (!panel) return;
+  panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
+}
+
+document.addEventListener('click', function(e) {
+  const ms = document.getElementById('lpHqMultiSelect');
+  const panel = document.getElementById('lpHqDropdownPanel');
+  if (ms && panel && !ms.contains(e.target)) panel.style.display = 'none';
+});
+
+function toggleLpHqAll(chk) {
+  document.querySelectorAll('.lpHqChk').forEach(b => b.checked = false);
+  lpHqFilter.clear();
+  chk.checked = true;
+  updateLpHqLabel();
+  buildLpReport();
+}
+
+function onLpHqCheckboxChange() {
+  const boxes = [...document.querySelectorAll('.lpHqChk')];
+  const checked = boxes.filter(b => b.checked).map(b => b.value);
+  lpHqFilter = new Set(checked);
+  document.getElementById('lpHqAllChk').checked = checked.length === 0;
+  updateLpHqLabel();
+  buildLpReport();
+}
+
+function updateLpHqLabel() {
+  const label = document.getElementById('lpHqSelectedLabel');
+  const btn   = document.getElementById('lpHqDropdownBtn');
+  if (!label) return;
+  if (lpHqFilter.size === 0) {
+    label.textContent = '(All)';
+    if (btn) btn.classList.remove('has-selection');
+  } else if (lpHqFilter.size === 1) {
+    label.textContent = '(' + [...lpHqFilter][0] + ')';
+    if (btn) btn.classList.add('has-selection');
+  } else {
+    label.textContent = '(' + lpHqFilter.size + ' selected)';
+    if (btn) btn.classList.add('has-selection');
+  }
+}
+
 // ── Build LP/ALP Wise Report ──
 function buildLpReport() {
   const body = document.getElementById('lpReportBody');
 
   if (!cache.ds && !cache.rs) {
-    body.innerHTML = '<tr><td colspan="7" style="padding:40px;text-align:center;color:var(--muted);">No data loaded. Please wait for dashboard to load first.</td></tr>';
+    body.innerHTML = '<tr><td colspan="8" style="padding:40px;text-align:center;color:var(--muted);">No data loaded. Please wait for dashboard to load first.</td></tr>';
     return;
   }
 
-  // Map: name -> { role: 'LP'|'ALP'|'LP/ALP', ds: N, rs: N }
+  // Map: name -> { role: 'LP'|'ALP'|'LP/ALP', ds: N, rsLP: N, rsALP: N, hq: 'DBEC'|... }
+  // NOTE: rs is tracked separately per source column (rsLP vs rsALP). A crew
+  // member whose name appears in BOTH the LP column and the ALP column of the
+  // RS Practice sheet (across different rows) gets role 'LP/ALP' — but their
+  // LP-column sessions must NOT be counted as ALP RS Practice sessions, or the
+  // "ALP Only" filter will show a total higher than the raw ALP-column entry
+  // count in the RS Practice sheet.
   const counts = new Map();
 
-  function add(name, role, sheet) {
+  function add(name, role, sheet, hqVal) {
     name = (name || '').trim();
     if (!name) return;
-    if (!counts.has(name)) counts.set(name, { role, ds: 0, rs: 0 });
+    hqVal = (hqVal || '').trim().toUpperCase();
+    if (!counts.has(name)) counts.set(name, { role, ds: 0, rsLP: 0, rsALP: 0, hq: hqVal });
     else {
+      const rec = counts.get(name);
       // upgrade role if seen in both
-      const existing = counts.get(name).role;
-      if (existing !== role && !existing.includes('/')) counts.get(name).role = 'LP/ALP';
+      if (rec.role !== role && !rec.role.includes('/')) rec.role = 'LP/ALP';
+      // keep first non-empty HQ value seen for this crew
+      if (!rec.hq && hqVal) rec.hq = hqVal;
     }
-    counts.get(name)[sheet]++;
+    const rec = counts.get(name);
+    if (sheet === 'ds') rec.ds++;
+    else if (sheet === 'rs') { if (role === 'LP') rec.rsLP++; else rec.rsALP++; }
   }
 
   if (cache.ds) {
     const c = RESOLVED.ds;
     cache.ds.rows.forEach(row => {
-      if (c.crew) add(row[c.crew], 'LP', 'ds');
+      if (c.crew) add(row[c.crew], 'LP', 'ds', c.hq ? row[c.hq] : '');
     });
   }
   if (cache.rs) {
     const c = RESOLVED.rs;
+    const lpHqCol  = c.lpHq  || c.hq;
+    const alpHqCol = c.alpHq || c.hq;
     cache.rs.rows.forEach(row => {
-      if (c.lp)  add(row[c.lp],  'LP',  'rs');
-      if (c.alp) add(row[c.alp], 'ALP', 'rs');
+      if (c.lp)  add(row[c.lp],  'LP',  'rs', lpHqCol  ? row[lpHqCol]  : '');
+      if (c.alp) add(row[c.alp], 'ALP', 'rs', alpHqCol ? row[alpHqCol] : '');
     });
   }
 
   if (counts.size === 0) {
-    body.innerHTML = '<tr><td colspan="7" style="padding:40px;text-align:center;color:var(--muted);">No LP/ALP name data found in either sheet.</td></tr>';
+    body.innerHTML = '<tr><td colspan="8" style="padding:40px;text-align:center;color:var(--muted);">No LP/ALP name data found in either sheet.</td></tr>';
     document.getElementById('lpReportMeta').textContent = '0 crew';
     return;
   }
@@ -2088,13 +2312,35 @@ function buildLpReport() {
   if (lpRoleFilter === 'LP')  entries = entries.filter(([,v]) => v.role === 'LP'  || v.role === 'LP/ALP');
   if (lpRoleFilter === 'ALP') entries = entries.filter(([,v]) => v.role === 'ALP' || v.role === 'LP/ALP');
 
-  // Sort by total desc
-  const sorted = entries
-    .map(([name, c]) => ({ name, role: c.role, ds: c.ds, rs: c.rs, total: c.ds + c.rs }))
+  // Sort by total desc. HQ: prefer the value read directly from the sheet's own
+  // LP HQ / ALP HQ column; fall back to the crew roster only if the sheet had none.
+  let sorted = entries
+    .map(([name, c]) => {
+      const rec = (hqAllCrew || []).find(x => x.name === name);
+      const hqFromSheet  = c.hq;
+      const hqFromRoster = rec && rec.hq ? rec.hq.trim().toUpperCase() : '';
+      // Pick RS count matching the active role filter, so a name that appears
+      // in BOTH RS Practice columns only contributes its ALP-column sessions
+      // when "ALP Only" is selected (and only its LP-column sessions under
+      // "LP Only"). Under "All" both are shown combined.
+      const rs = lpRoleFilter === 'LP'  ? c.rsLP :
+                 lpRoleFilter === 'ALP' ? c.rsALP :
+                 c.rsLP + c.rsALP;
+      return {
+        name, role: c.role, ds: c.ds, rs, total: c.ds + rs,
+        hq: hqFromSheet || hqFromRoster || 'UNKNOWN',
+        cmsid: rec && rec.cmsid ? rec.cmsid : '—'
+      };
+    })
     .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
 
+  // Apply HQ filter (empty set = All HQ)
+  if (lpHqFilter.size > 0) {
+    sorted = sorted.filter(r => lpHqFilter.has(r.hq));
+  }
+
   if (sorted.length === 0) {
-    body.innerHTML = '<tr><td colspan="7" style="padding:40px;text-align:center;color:var(--muted);">No records for selected role filter.</td></tr>';
+    body.innerHTML = '<tr><td colspan="8" style="padding:40px;text-align:center;color:var(--muted);">No records for the selected filters.</td></tr>';
     document.getElementById('lpReportMeta').textContent = '0 crew';
     return;
   }
@@ -2112,6 +2358,7 @@ function buildLpReport() {
     html += `<tr>
       <td class="sno">${i + 1}</td>
       <td class="crew-name">${esc(row.name)}</td>
+      <td style="text-align:center;font-family:'Courier New',monospace;color:var(--muted);">${esc(row.cmsid)}</td>
       <td style="text-align:center;"><span class="role-badge ${roleCls}">${esc(row.role)}</span></td>
       <td class="ds-count">${row.ds || '—'}</td>
       <td class="rs-count">${row.rs || '—'}</td>
@@ -2128,6 +2375,7 @@ function buildLpReport() {
   html += `<tr class="lp-grand-total">
     <td class="sno">—</td>
     <td style="color:#2ecc71!important;font-weight:700;">GRAND TOTAL (${sorted.length} crew)</td>
+    <td></td>
     <td></td>
     <td class="ds-count" style="color:var(--signal-yellow)!important;">${grandDS}</td>
     <td class="rs-count" style="color:var(--signal-yellow)!important;">${grandRS}</td>
@@ -2147,69 +2395,100 @@ function generateLpPDF() {
   }
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+  doc.setTextColor(0, 0, 0);
   const pageWidth = doc.internal.pageSize.getWidth();
 
-  let y = 40;
+  let y = 32;
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
+  doc.setFontSize(13);
   doc.text('RAIPUR DIVISION — LP/ALP WISE DATA REPORT', pageWidth / 2, y, { align: 'center' });
-  y += 16;
+  y += 14;
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
+  doc.setFontSize(8.5);
   const roleLabel = lpRoleFilter === 'all' ? 'All Crew' : lpRoleFilter + ' Only';
-  doc.text('Generated: ' + new Date().toLocaleString('en-IN') + '  |  Filter: ' + roleLabel, pageWidth / 2, y, { align: 'center' });
-  y += 20;
+  const hqLabel = lpHqFilter.size === 0 ? 'All HQ' : [...lpHqFilter].join(', ');
+  doc.text('Generated: ' + new Date().toLocaleString('en-IN') + '  |  Role: ' + roleLabel + '  |  HQ: ' + hqLabel, pageWidth / 2, y, { align: 'center' });
+  y += 16;
 
   // Collect same as buildLpReport
   const counts = new Map();
-  function add(name, role, sheet) {
+  function add(name, role, sheet, hqVal) {
     name = (name || '').trim(); if (!name) return;
-    if (!counts.has(name)) counts.set(name, { role, ds: 0, rs: 0 });
+    hqVal = (hqVal || '').trim().toUpperCase();
+    if (!counts.has(name)) counts.set(name, { role, ds: 0, rsLP: 0, rsALP: 0, hq: hqVal });
     else {
-      const ex = counts.get(name).role;
-      if (ex !== role && !ex.includes('/')) counts.get(name).role = 'LP/ALP';
+      const rec = counts.get(name);
+      if (rec.role !== role && !rec.role.includes('/')) rec.role = 'LP/ALP';
+      if (!rec.hq && hqVal) rec.hq = hqVal;
     }
-    counts.get(name)[sheet]++;
+    const rec = counts.get(name);
+    if (sheet === 'ds') rec.ds++;
+    else if (sheet === 'rs') { if (role === 'LP') rec.rsLP++; else rec.rsALP++; }
   }
-  if (cache.ds) { const c = RESOLVED.ds; cache.ds.rows.forEach(row => { if (c.crew) add(row[c.crew], 'LP', 'ds'); }); }
-  if (cache.rs) { const c = RESOLVED.rs; cache.rs.rows.forEach(row => { if (c.lp) add(row[c.lp], 'LP', 'rs'); if (c.alp) add(row[c.alp], 'ALP', 'rs'); }); }
+  if (cache.ds) {
+    const c = RESOLVED.ds;
+    cache.ds.rows.forEach(row => { if (c.crew) add(row[c.crew], 'LP', 'ds', c.hq ? row[c.hq] : ''); });
+  }
+  if (cache.rs) {
+    const c = RESOLVED.rs;
+    const lpHqCol  = c.lpHq  || c.hq;
+    const alpHqCol = c.alpHq || c.hq;
+    cache.rs.rows.forEach(row => {
+      if (c.lp)  add(row[c.lp],  'LP',  'rs', lpHqCol  ? row[lpHqCol]  : '');
+      if (c.alp) add(row[c.alp], 'ALP', 'rs', alpHqCol ? row[alpHqCol] : '');
+    });
+  }
 
   let entries = [...counts.entries()];
   if (lpRoleFilter === 'LP')  entries = entries.filter(([,v]) => v.role === 'LP'  || v.role === 'LP/ALP');
   if (lpRoleFilter === 'ALP') entries = entries.filter(([,v]) => v.role === 'ALP' || v.role === 'LP/ALP');
 
-  const sorted = entries
-    .map(([name, c]) => ({ name, role: c.role, ds: c.ds, rs: c.rs, total: c.ds + c.rs }))
+  let sorted = entries
+    .map(([name, c]) => {
+      const rec = (hqAllCrew || []).find(x => x.name === name);
+      const hqFromRoster = rec && rec.hq ? rec.hq.trim().toUpperCase() : '';
+      const rs = lpRoleFilter === 'LP'  ? c.rsLP :
+                 lpRoleFilter === 'ALP' ? c.rsALP :
+                 c.rsLP + c.rsALP;
+      return {
+        name, role: c.role, ds: c.ds, rs, total: c.ds + rs,
+        hq: c.hq || hqFromRoster || 'UNKNOWN',
+        cmsid: rec && rec.cmsid ? rec.cmsid : '—'
+      };
+    })
     .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
+
+  if (lpHqFilter.size > 0) sorted = sorted.filter(r => lpHqFilter.has(r.hq));
 
   let grandDS = 0, grandRS = 0;
   const bodyRows = sorted.map((row, i) => {
     grandDS += row.ds; grandRS += row.rs;
-    return [i + 1, row.name, row.role, row.ds || 0, row.rs || 0, row.total];
+    return [i + 1, row.name, row.cmsid, row.role, row.ds || 0, row.rs || 0, row.total];
   });
-  bodyRows.push(['—', 'GRAND TOTAL (' + sorted.length + ' crew)', '', grandDS, grandRS, grandDS + grandRS]);
+  bodyRows.push(['—', 'GRAND TOTAL (' + sorted.length + ' crew)', '', '', grandDS, grandRS, grandDS + grandRS]);
 
   doc.autoTable({
     startY: y,
-    head: [['S.NO', 'NAME', 'ROLE', 'APPROACHING SIGNAL\n(Danger Counselling)', 'RS PRACTICE', 'TOTAL']],
+    head: [['S.NO', 'NAME', 'LP/ALP ID', 'DESIGNATION', 'APPROACHING SIGNAL\n(Danger Counselling)', 'RS PRACTICE', 'TOTAL']],
     body: bodyRows,
-    styles: { fontSize: 9, cellPadding: 5 },
-    headStyles: { fillColor: [13, 43, 30], textColor: [46, 204, 113], fontStyle: 'bold', fontSize: 8 },
+    styles: { fontSize: 8, cellPadding: 3, textColor: [0, 0, 0] },
+    headStyles: { fillColor: [225, 225, 225], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 7.5 },
     columnStyles: {
-      0: { halign: 'center', cellWidth: 35 },
-      2: { halign: 'center', cellWidth: 45 },
-      3: { halign: 'center', textColor: [224, 65, 63], fontStyle: 'bold' },
-      4: { halign: 'center', textColor: [43, 182, 115], fontStyle: 'bold' },
-      5: { halign: 'center', textColor: [240, 180, 41], fontStyle: 'bold' }
+      0: { halign: 'center', cellWidth: 32 },
+      2: { halign: 'center', cellWidth: 50 },
+      3: { halign: 'center', cellWidth: 42 },
+      4: { halign: 'center', fontStyle: 'bold' },
+      5: { halign: 'center', fontStyle: 'bold' },
+      6: { halign: 'center', fontStyle: 'bold' }
     },
     didParseCell: function(data) {
       if (data.row.index === bodyRows.length - 1) {
-        data.cell.styles.fillColor = [13, 43, 30];
+        data.cell.styles.fillColor = [225, 225, 225];
         data.cell.styles.fontStyle = 'bold';
-        data.cell.styles.textColor = [240, 180, 41];
+        data.cell.styles.textColor = [0, 0, 0];
       }
     },
-    margin: { left: 40, right: 40 },
+    margin: { left: 28, right: 28 },
     theme: 'grid'
   });
 
@@ -2915,17 +3194,18 @@ function generateHqPDF() {
   }
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+  doc.setTextColor(0, 0, 0);
   const pageWidth = doc.internal.pageSize.getWidth();
-  let y = 40;
+  let y = 32;
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
+  doc.setFontSize(13);
   doc.text('RAIPUR DIVISION — HQ WISE DESIGNATION BREAKDOWN', pageWidth / 2, y, { align: 'center' });
-  y += 16;
+  y += 14;
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
+  doc.setFontSize(8.5);
   doc.text('Generated: ' + new Date().toLocaleString('en-IN') + '  |  DS = Danger Signal Counselling  |  RS = RS Practice', pageWidth / 2, y, { align: 'center' });
-  y += 22;
+  y += 16;
 
   function normalizeDesg(d) {
     const u = (d || '').toUpperCase().trim();
@@ -3020,25 +3300,25 @@ function generateHqPDF() {
     startY: y,
     head: [['HQ','DESIGNATION','TOTAL CREW','DS DONE','DS %','RS DONE','RS %','BOTH DONE','BOTH %','PENDING']],
     body: bodyRows,
-    styles: { fontSize: 8, cellPadding: 4 },
-    headStyles: { fillColor: [8, 21, 32], textColor: [0, 212, 255], fontStyle: 'bold', fontSize: 7.5 },
+    styles: { fontSize: 7, cellPadding: 2.5, textColor: [0, 0, 0] },
+    headStyles: { fillColor: [225, 225, 225], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 6.5 },
     columnStyles: {
       0: { fontStyle:'bold' },
-      2: { halign:'center', textColor:[255,255,255], fontStyle:'bold' },
-      3: { halign:'center', textColor:[224,65,63],   fontStyle:'bold' },
-      4: { halign:'center', textColor:[224,65,63] },
-      5: { halign:'center', textColor:[43,182,115],  fontStyle:'bold' },
-      6: { halign:'center', textColor:[43,182,115] },
-      7: { halign:'center', textColor:[240,180,41],  fontStyle:'bold' },
-      8: { halign:'center', textColor:[240,180,41] },
-      9: { halign:'center', textColor:[200,80,80] }
+      2: { halign:'center', fontStyle:'bold' },
+      3: { halign:'center', fontStyle:'bold' },
+      4: { halign:'center' },
+      5: { halign:'center', fontStyle:'bold' },
+      6: { halign:'center' },
+      7: { halign:'center', fontStyle:'bold' },
+      8: { halign:'center' },
+      9: { halign:'center' }
     },
     didParseCell: function(data) {
       const txt = String(data.row.raw[0]);
-      if (txt.startsWith('↳')) { data.cell.styles.fillColor=[13,30,42]; data.cell.styles.fontStyle='bold'; }
-      if (txt === 'GRAND TOTAL') { data.cell.styles.fillColor=[8,21,32]; data.cell.styles.fontStyle='bold'; data.cell.styles.textColor=[240,180,41]; }
+      if (txt.startsWith('↳')) { data.cell.styles.fillColor=[240,240,240]; data.cell.styles.fontStyle='bold'; data.cell.styles.textColor=[0,0,0]; }
+      if (txt === 'GRAND TOTAL') { data.cell.styles.fillColor=[210,210,210]; data.cell.styles.fontStyle='bold'; data.cell.styles.textColor=[0,0,0]; }
     },
-    margin: { left:30, right:30 },
+    margin: { left:24, right:24 },
     theme: 'grid'
   });
 
