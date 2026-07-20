@@ -3661,9 +3661,22 @@ function generateCoveragePDF() {
   doc.text(plainTypeLabel + '  |  Generated: ' + new Date().toLocaleString('en-IN'), pageWidth / 2, y, { align: 'center' });
   y += 10;
 
+  const filtered = coverageFilteredList();
+  const hqVal = (document.getElementById('coverageHqFilter').value || '').trim();
+  const qVal  = (document.getElementById('coverageSearch').value || '').trim();
+  if (hqVal || qVal) {
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(8.5);
+    const filterBits = [];
+    if (hqVal) filterBits.push('HQ/Lobby: ' + hqVal);
+    if (qVal)  filterBits.push('Search: "' + qVal + '"');
+    doc.text('Filtered by — ' + filterBits.join('  |  '), pageWidth / 2, y, { align: 'center' });
+    y += 10;
+  }
+
   const sections = coverageTab === 'covered'
-    ? [ { title: 'COVERED CREW  (' + coverageResult.covered.length + ')', rows: coverageResult.covered } ]
-    : [ { title: 'UNCOVERED CREW  (' + coverageResult.uncovered.length + ')', rows: coverageResult.uncovered } ];
+    ? [ { title: 'COVERED CREW  (' + filtered.length + ')', rows: filtered } ]
+    : [ { title: 'UNCOVERED CREW  (' + filtered.length + ')', rows: filtered } ];
 
   sections.forEach(sec => {
     y += 18;
@@ -3673,12 +3686,12 @@ function generateCoveragePDF() {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(11);
     doc.text(sec.title, 34, y, { align: 'left' });
-    const body = [...sec.rows].sort((a, b) => a.name.localeCompare(b.name))
+    const body = sec.rows
       .map((c, i) => [i + 1, c.name, c.cmsid || '—', c.desg || '—', c.hq || '—', c.occ || 0]);
     doc.autoTable({
       startY: y + 8,
       head: [['S.NO', 'NAME', 'ID', 'DESIGNATION', 'HQ', 'NO OF TIMES']],
-      body: body.length ? body : [['—', 'No crew in this category', '', '', '']],
+      body: body.length ? body : [['—', 'No crew in this category', '', '', '', '']],
       styles: { fontSize: 8.5, cellPadding: 4 },
       headStyles: { fillColor: [20, 30, 40], textColor: 255 },
       margin: { left: 24, right: 24 },
