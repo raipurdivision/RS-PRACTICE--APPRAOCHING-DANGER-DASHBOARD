@@ -10,6 +10,7 @@
 
 
 
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1331,6 +1332,9 @@
         <button class="role-chip active-alp" id="covTabCovered" onclick="setCoverageTab('covered')">✅ Covered (<span id="covCountCovered">0</span>)</button>
         <button class="role-chip" id="covTabUncovered" onclick="setCoverageTab('uncovered')">❌ Uncovered (<span id="covCountUncovered">0</span>)</button>
         <input type="text" class="hq-search" id="coverageSearch" placeholder="🔍  Search name / ID / HQ…" oninput="renderCoverageModal()" style="flex:1;min-width:160px;">
+        <select class="styled-select" id="coverageHqFilter" onchange="renderCoverageModal()" style="min-width:150px;">
+          <option value="">All HQ / Lobby</option>
+        </select>
       </div>
       <div style="display:flex;gap:8px;padding:10px 16px 0;flex-wrap:wrap;">
         <button class="hq-pdf-btn" onclick="generateCoveragePDF()">📄 Generate PDF</button>
@@ -1345,6 +1349,7 @@
               <th>ALP / LP ID</th>
               <th>DESIGNATION</th>
               <th>HQ / LOBBY</th>
+              <th style="text-align:center;cursor:pointer;user-select:none;" id="covSortTimesHeader" onclick="toggleCoverageSortByTimes()">NO OF TIMES <span id="covSortTimesArrow">⇅</span></th>
             </tr>
           </thead>
           <tbody id="coverageModalBody"></tbody>
@@ -3447,6 +3452,7 @@ function closePendingModal() {
 let coverageResult = { covered: [], uncovered: [] };
 let coverageTab  = 'covered';
 let coverageType = null;   // 'rs' | 'ds'
+let coverageTimesSort = null;   // null | 'asc' | 'desc'
 
 function normId(v) {
   return String(v == null ? '' : v).trim().toUpperCase();
@@ -3467,32 +3473,30 @@ function buildCoverageResult(type) {
   const rosterCrew = type === 'rs' ? hqAllCrew.filter(c => isAlpDesg(c.desg)) : hqAllCrew;
 
   // Collect every ID found in the relevant data sheet, from every
-  // ID-like column it has, across every row.
-  const dataIds = new Set();
+  // ID-like column it has, across every row — counting how many times
+  // each ID repeats (e.g. an ID appearing on 5 different rows → count 5).
+  const dataIds = new Map();
+  const bumpId = v => { if (v) dataIds.set(v, (dataIds.get(v) || 0) + 1); };
   if (type === 'rs' && cache.rs && cache.rs.rows) {
     const c = RESOLVED.rs;
     const idCols = [c.alpId, c.genId].filter(Boolean);   // ALP-only → don't pull in LP ID column
     cache.rs.rows.forEach(row => {
-      idCols.forEach(col => {
-        const v = normId(row[col]);
-        if (v) dataIds.add(v);
-      });
+      idCols.forEach(col => bumpId(normId(row[col])));
     });
   } else if (type === 'ds' && cache.ds && cache.ds.rows) {
     const c = RESOLVED.ds;
     const idCols = [c.id].filter(Boolean);
     cache.ds.rows.forEach(row => {
-      idCols.forEach(col => {
-        const v = normId(row[col]);
-        if (v) dataIds.add(v);
-      });
+      idCols.forEach(col => bumpId(normId(row[col])));
     });
   }
 
   rosterCrew.forEach(crew => {
     const id = normId(crew.cmsid);
-    const target = id && dataIds.has(id) ? covered : uncovered;
-    target.push(crew);
+    const occ = id ? (dataIds.get(id) || 0) : 0;
+    const record = Object.assign({}, crew, { occ });
+    const target = occ > 0 ? covered : uncovered;
+    target.push(record);
   });
 
   return { covered, uncovered };
@@ -3535,14 +3539,30 @@ async function loadCoverage(type) {
     (idColFound ? '' : ' · ⚠ no ID column detected in the data sheet — all crew will show as uncovered');
 
   coverageTab = 'covered';
+  coverageTimesSort = null;
+  updateCoverageSortArrow();
   document.getElementById('covTabCovered').className   = 'role-chip active-alp';
   document.getElementById('covTabUncovered').className = 'role-chip';
   document.getElementById('coverageSearch').value = '';
+  populateCoverageHqFilter();
 
   document.getElementById('coverageTypeChooser').style.display = 'none';
   document.getElementById('coverageResultsWrap').style.display = 'block';
 
   renderCoverageModal();
+}
+
+function populateCoverageHqFilter() {
+  const sel = document.getElementById('coverageHqFilter');
+  const prev = sel.value;
+  const hqs = new Set();
+  [...coverageResult.covered, ...coverageResult.uncovered].forEach(c => {
+    if (c.hq) hqs.add(c.hq);
+  });
+  const sorted = [...hqs].sort((a, b) => a.localeCompare(b));
+  sel.innerHTML = '<option value="">All HQ / Lobby</option>' +
+    sorted.map(hq => `<option value="${esc(hq)}">${esc(hq)}</option>`).join('');
+  if (sorted.includes(prev)) sel.value = prev;
 }
 
 function setCoverageTab(tab) {
@@ -3552,11 +3572,33 @@ function setCoverageTab(tab) {
   renderCoverageModal();
 }
 
+function toggleCoverageSortByTimes() {
+  coverageTimesSort = coverageTimesSort === 'desc' ? 'asc' : (coverageTimesSort === 'asc' ? null : 'desc');
+  updateCoverageSortArrow();
+  renderCoverageModal();
+}
+
+function updateCoverageSortArrow() {
+  const el = document.getElementById('covSortTimesArrow');
+  if (!el) return;
+  el.textContent = coverageTimesSort === 'desc' ? '▼' : coverageTimesSort === 'asc' ? '▲' : '⇅';
+}
+
 function coverageFilteredList() {
-  const q = (document.getElementById('coverageSearch').value || '').toLowerCase().trim();
-  return (coverageTab === 'covered' ? coverageResult.covered : coverageResult.uncovered)
+  const q  = (document.getElementById('coverageSearch').value || '').toLowerCase().trim();
+  const hq = (document.getElementById('coverageHqFilter').value || '').trim();
+  const list = (coverageTab === 'covered' ? coverageResult.covered : coverageResult.uncovered)
     .filter(c => !q || c.name.toLowerCase().includes(q) || (c.cmsid || '').toLowerCase().includes(q) || (c.hq || '').toLowerCase().includes(q))
-    .sort((a, b) => a.name.localeCompare(b.name));
+    .filter(c => !hq || c.hq === hq);
+
+  if (coverageTimesSort === 'desc') {
+    list.sort((a, b) => (b.occ || 0) - (a.occ || 0) || a.name.localeCompare(b.name));
+  } else if (coverageTimesSort === 'asc') {
+    list.sort((a, b) => (a.occ || 0) - (b.occ || 0) || a.name.localeCompare(b.name));
+  } else {
+    list.sort((a, b) => a.name.localeCompare(b.name));
+  }
+  return list;
 }
 
 function renderCoverageModal() {
@@ -3572,13 +3614,14 @@ function renderCoverageModal() {
       <td class="p-cms">${esc(c.cmsid || '—')}</td>
       <td class="p-desg"><span class="desg-badge ${badgeCls}">${esc(c.desg || '—')}</span></td>
       <td>${esc(c.hq || '—')}</td>
+      <td style="text-align:center;font-family:'Courier New',monospace;color:var(--amber);">${c.occ || 0}</td>
     </tr>`;
   });
 
   const emptyMsg = coverageTab === 'covered'
     ? 'No covered crew found — no roster IDs matched the data sheet.'
     : 'No uncovered crew found — every roster ID matched the data sheet.';
-  tbody.innerHTML = rows || `<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--muted);">${emptyMsg}</td></tr>`;
+  tbody.innerHTML = rows || `<tr><td colspan="6" style="padding:20px;text-align:center;color:var(--muted);">${emptyMsg}</td></tr>`;
 
   const q = (document.getElementById('coverageSearch').value || '').trim();
   document.getElementById('coverageModalFooter').textContent =
@@ -3631,10 +3674,10 @@ function generateCoveragePDF() {
     doc.setFontSize(11);
     doc.text(sec.title, 34, y, { align: 'left' });
     const body = [...sec.rows].sort((a, b) => a.name.localeCompare(b.name))
-      .map((c, i) => [i + 1, c.name, c.cmsid || '—', c.desg || '—', c.hq || '—']);
+      .map((c, i) => [i + 1, c.name, c.cmsid || '—', c.desg || '—', c.hq || '—', c.occ || 0]);
     doc.autoTable({
       startY: y + 8,
-      head: [['S.NO', 'NAME', 'ID', 'DESIGNATION', 'HQ']],
+      head: [['S.NO', 'NAME', 'ID', 'DESIGNATION', 'HQ', 'NO OF TIMES']],
       body: body.length ? body : [['—', 'No crew in this category', '', '', '']],
       styles: { fontSize: 8.5, cellPadding: 4 },
       headStyles: { fillColor: [20, 30, 40], textColor: 255 },
@@ -3656,7 +3699,7 @@ function downloadCoverageExcel() {
   if (!coverageType) { alert('Choose a report type first.'); return; }
 
   const toRows = list => [...list].sort((a, b) => a.name.localeCompare(b.name))
-    .map((c, i) => ({ 'S.NO': i + 1, 'NAME': c.name, 'ID': c.cmsid || '—', 'DESIGNATION': c.desg || '—', 'HQ / LOBBY': c.hq || '—' }));
+    .map((c, i) => ({ 'S.NO': i + 1, 'NAME': c.name, 'ID': c.cmsid || '—', 'DESIGNATION': c.desg || '—', 'HQ / LOBBY': c.hq || '—', 'NO OF TIMES': c.occ || 0 }));
 
   const wb = XLSX.utils.book_new();
   const wsCovered   = XLSX.utils.json_to_sheet(toRows(coverageResult.covered));
