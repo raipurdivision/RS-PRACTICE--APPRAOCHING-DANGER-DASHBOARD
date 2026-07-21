@@ -11,6 +11,7 @@
 
 
 
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -187,6 +188,20 @@
   .panel-title { display:flex; align-items:center; justify-content:space-between; margin: 28px 0 10px; }
   .panel-title h2 { font-size:16px; margin:0; letter-spacing:.5px; }
   .count-chip { background:var(--panel-2); border:1px solid var(--line); padding:4px 12px; border-radius:20px; font-size:12px; color:var(--muted); font-family:'Courier New',monospace; }
+
+  .remarks-input {
+    width: 100%;
+    min-width: 160px;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    color: var(--text);
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    outline: none;
+  }
+  .remarks-input:focus { border-color: var(--signal-green); box-shadow: 0 0 0 2px rgba(43,182,115,0.15); }
 
   .table-scroll { background:var(--panel); border:1px solid var(--line); border-radius:10px; overflow-x:auto; max-height:460px; overflow-y:auto; }
   table { width:100%; border-collapse:collapse; font-size:12.5px; white-space:nowrap; }
@@ -1350,6 +1365,7 @@
               <th>DESIGNATION</th>
               <th>HQ / LOBBY</th>
               <th style="text-align:center;cursor:pointer;user-select:none;" id="covSortTimesHeader" onclick="toggleCoverageSortByTimes()">NO OF TIMES <span id="covSortTimesArrow">⇅</span></th>
+              <th id="covRemarksHeader" style="display:none;min-width:170px;">REMARKS</th>
             </tr>
           </thead>
           <tbody id="coverageModalBody"></tbody>
@@ -3584,6 +3600,29 @@ function updateCoverageSortArrow() {
   el.textContent = coverageTimesSort === 'desc' ? '▼' : coverageTimesSort === 'asc' ? '▲' : '⇅';
 }
 
+// ── Remarks — RS Practice Uncovered table ──
+// Saved in localStorage on this device/browser, keyed by crew ID (or name+HQ
+// if no ID), so remarks persist the next time the same report is opened.
+const RS_REMARKS_KEY = 'rsUncoveredRemarks_v1';
+
+function loadRsRemarks() {
+  try { return JSON.parse(localStorage.getItem(RS_REMARKS_KEY) || '{}'); }
+  catch(e) { return {}; }
+}
+function saveRsRemarks(remarks) {
+  try { localStorage.setItem(RS_REMARKS_KEY, JSON.stringify(remarks)); }
+  catch(e) { /* storage unavailable — ignore */ }
+}
+function remarkKeyFor(c) {
+  return ((c.cmsid && c.cmsid !== '—') ? c.cmsid : (c.name + '|' + (c.hq || ''))).trim().toUpperCase();
+}
+function updateRsRemark(key, value) {
+  const remarks = loadRsRemarks();
+  if (value && value.trim()) remarks[key] = value;
+  else delete remarks[key];
+  saveRsRemarks(remarks);
+}
+
 function coverageFilteredList() {
   const q  = (document.getElementById('coverageSearch').value || '').toLowerCase().trim();
   const hq = (document.getElementById('coverageHqFilter').value || '').trim();
@@ -3605,9 +3644,18 @@ function renderCoverageModal() {
   const tbody = document.getElementById('coverageModalBody');
   const list = coverageFilteredList();
 
+  const showRemarks = (coverageType === 'rs' && coverageTab === 'uncovered');
+  const remarksHeader = document.getElementById('covRemarksHeader');
+  if (remarksHeader) remarksHeader.style.display = showRemarks ? '' : 'none';
+  const rsRemarks = showRemarks ? loadRsRemarks() : {};
+
   let rows = '';
   list.forEach((c, i) => {
     const badgeCls = isAlpDesg(c.desg) ? 'desg-alp' : (c.desg || '').toUpperCase().includes('LP') ? 'desg-lp' : 'desg-other';
+    const remarkKey = remarkKeyFor(c);
+    const remarksCell = showRemarks
+      ? `<td><input type="text" class="remarks-input" data-key="${esc(remarkKey)}" value="${esc(rsRemarks[remarkKey] || '')}" placeholder="Add remarks…" oninput="updateRsRemark(this.dataset.key, this.value)"></td>`
+      : '';
     rows += `<tr>
       <td class="p-sno">${i + 1}</td>
       <td class="p-name">${esc(c.name)}</td>
@@ -3615,13 +3663,14 @@ function renderCoverageModal() {
       <td class="p-desg"><span class="desg-badge ${badgeCls}">${esc(c.desg || '—')}</span></td>
       <td>${esc(c.hq || '—')}</td>
       <td style="text-align:center;font-family:'Courier New',monospace;color:var(--amber);">${c.occ || 0}</td>
+      ${remarksCell}
     </tr>`;
   });
 
   const emptyMsg = coverageTab === 'covered'
     ? 'No covered crew found — no roster IDs matched the data sheet.'
     : 'No uncovered crew found — every roster ID matched the data sheet.';
-  tbody.innerHTML = rows || `<tr><td colspan="6" style="padding:20px;text-align:center;color:var(--muted);">${emptyMsg}</td></tr>`;
+  tbody.innerHTML = rows || `<tr><td colspan="${showRemarks ? 7 : 6}" style="padding:20px;text-align:center;color:var(--muted);">${emptyMsg}</td></tr>`;
 
   const q = (document.getElementById('coverageSearch').value || '').trim();
   document.getElementById('coverageModalFooter').textContent =
@@ -3678,6 +3727,9 @@ function generateCoveragePDF() {
     ? [ { title: 'COVERED CREW  (' + filtered.length + ')', rows: filtered } ]
     : [ { title: 'UNCOVERED CREW  (' + filtered.length + ')', rows: filtered } ];
 
+  const includeRemarks = (coverageType === 'rs' && coverageTab === 'uncovered');
+  const rsRemarksMap = includeRemarks ? loadRsRemarks() : {};
+
   sections.forEach(sec => {
     y += 18;
     const barColor = coverageTab === 'covered' ? [43, 182, 115] : [224, 65, 63];
@@ -3686,12 +3738,18 @@ function generateCoveragePDF() {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(11);
     doc.text(sec.title, 34, y, { align: 'left' });
-    const body = sec.rows
-      .map((c, i) => [i + 1, c.name, c.cmsid || '—', c.desg || '—', c.hq || '—', c.occ || 0]);
+    const body = sec.rows.map((c, i) => {
+      const row = [i + 1, c.name, c.cmsid || '—', c.desg || '—', c.hq || '—', c.occ || 0];
+      if (includeRemarks) row.push(rsRemarksMap[remarkKeyFor(c)] || '');
+      return row;
+    });
+    const head = includeRemarks
+      ? [['S.NO', 'NAME', 'ID', 'DESIGNATION', 'HQ', 'NO OF TIMES', 'REMARKS']]
+      : [['S.NO', 'NAME', 'ID', 'DESIGNATION', 'HQ', 'NO OF TIMES']];
     doc.autoTable({
       startY: y + 8,
-      head: [['S.NO', 'NAME', 'ID', 'DESIGNATION', 'HQ', 'NO OF TIMES']],
-      body: body.length ? body : [['—', 'No crew in this category', '', '', '', '']],
+      head: head,
+      body: body.length ? body : [['—', 'No crew in this category', '', '', '', ''].concat(includeRemarks ? [''] : [])],
       styles: { fontSize: 8.5, cellPadding: 4 },
       headStyles: { fillColor: [20, 30, 40], textColor: 255 },
       margin: { left: 24, right: 24 },
@@ -3711,12 +3769,19 @@ function downloadCoverageExcel() {
   }
   if (!coverageType) { alert('Choose a report type first.'); return; }
 
-  const toRows = list => [...list].sort((a, b) => a.name.localeCompare(b.name))
-    .map((c, i) => ({ 'S.NO': i + 1, 'NAME': c.name, 'ID': c.cmsid || '—', 'DESIGNATION': c.desg || '—', 'HQ / LOBBY': c.hq || '—', 'NO OF TIMES': c.occ || 0 }));
+  const includeRemarks = coverageType === 'rs';
+  const rsRemarksMap = includeRemarks ? loadRsRemarks() : {};
+
+  const toRows = (list, withRemarks) => [...list].sort((a, b) => a.name.localeCompare(b.name))
+    .map((c, i) => {
+      const row = { 'S.NO': i + 1, 'NAME': c.name, 'ID': c.cmsid || '—', 'DESIGNATION': c.desg || '—', 'HQ / LOBBY': c.hq || '—', 'NO OF TIMES': c.occ || 0 };
+      if (withRemarks) row['REMARKS'] = rsRemarksMap[remarkKeyFor(c)] || '';
+      return row;
+    });
 
   const wb = XLSX.utils.book_new();
-  const wsCovered   = XLSX.utils.json_to_sheet(toRows(coverageResult.covered));
-  const wsUncovered = XLSX.utils.json_to_sheet(toRows(coverageResult.uncovered));
+  const wsCovered   = XLSX.utils.json_to_sheet(toRows(coverageResult.covered, false));
+  const wsUncovered = XLSX.utils.json_to_sheet(toRows(coverageResult.uncovered, includeRemarks));
   XLSX.utils.book_append_sheet(wb, wsCovered, 'Covered');
   XLSX.utils.book_append_sheet(wb, wsUncovered, 'Uncovered');
 
