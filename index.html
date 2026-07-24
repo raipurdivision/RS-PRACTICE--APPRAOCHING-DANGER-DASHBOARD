@@ -12,6 +12,9 @@
 
 
 
+
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -742,6 +745,31 @@
   .hq-grand-total { background: #0d1e2a !important; border-top: 2px solid #1a3a4a; font-weight: 700; }
   .hq-grand-total td { color: var(--signal-yellow) !important; font-size: 13px; }
 
+  /* ── RS Practice Done — HQ Wise Pie Chart + Breakup ── */
+  .rs-pie-wrap {
+    display: flex; gap: 22px; flex-wrap: wrap; align-items: stretch;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    padding: 20px; margin-bottom: 28px;
+  }
+  .rs-pie-chart-box {
+    position: relative; flex: 0 0 auto;
+    display: flex; align-items: center; justify-content: center;
+    min-width: 220px;
+  }
+  .rs-pie-center {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    text-align: center; pointer-events: none;
+  }
+  .rs-pie-center .rs-pie-total { font-size: 22px; font-weight: 700; color: #fff; font-family: 'Courier New', monospace; }
+  .rs-pie-center .rs-pie-label { font-size: 9.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 2px; }
+  .rs-pie-slice { cursor: pointer; transition: opacity 0.15s; }
+  .rs-pie-slice:hover { opacity: 0.78; }
+  .rs-pie-table-wrap {
+    flex: 1 1 320px; min-width: 280px;
+    overflow-x: auto; border: 1px solid var(--line); border-radius: 8px;
+  }
+  .rs-pie-legend-dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; margin-right: 8px; flex-shrink: 0; }
+
   /* ── Detail Summary Table (all crew × DS/RS status) ── */
   .detail-summary-wrap {
     background: var(--panel);
@@ -991,7 +1019,12 @@
 
     <div class="cli-report-header">
       <h2>👤 CLI WISE DATA REPORT</h2>
-      <div style="display:flex;gap:10px;align-items:center;">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <select class="styled-select" id="cliReportModeFilter" onchange="buildCliReport()" style="min-width:260px;border-color:#9b59b6;">
+          <option value="combined">🔀 Both — Combined View</option>
+          <option value="ds">⛔ Approaching Danger Counselling — Separately</option>
+          <option value="rs">🛠 RS Practice — Separately</option>
+        </select>
         <span class="cli-report-meta" id="cliReportMeta">—</span>
         <button class="cli-pdf-btn" onclick="generateCliPDF()">📄 Export PDF</button>
       </div>
@@ -1015,7 +1048,7 @@
 
     <div class="cli-report-table-wrap">
       <table class="cli-report-table" id="cliReportTable">
-        <thead>
+        <thead id="cliReportHead">
           <tr>
             <th class="num">S.NO</th>
             <th>CLI NAME</th>
@@ -1031,7 +1064,7 @@
       </table>
     </div>
 
-    <div class="footer-note">CLI WISE REPORT · RAIPUR DIVISION · BOTH SHEETS COMBINED</div>
+    <div class="footer-note" id="cliReportFooterNote">CLI WISE REPORT · RAIPUR DIVISION · BOTH SHEETS COMBINED</div>
   </div><!-- end tabContentCliReport -->
 
   <!-- ── TAB: LP/ALP Wise Data Report ── -->
@@ -1156,7 +1189,8 @@
       </span>
     </div>
 
-    <!-- ── Designation × HQ breakdown table ── -->
+    <!-- ── Designation × HQ breakdown table (hidden per request, JS still populates it in background) ── -->
+    <div style="display:none;">
     <div class="hq-section-title">
       <h3 style="color:#00d4ff;">📊 HQ × Designation Breakdown — Total Crew · DS Completed · RS Completed</h3>
     </div>
@@ -1188,10 +1222,44 @@
       </table>
     </div>
     <div id="hqRsDiagNote" style="margin-top:10px;font-size:11.5px;color:var(--muted);font-family:'Courier New',monospace;line-height:1.7;"></div>
+    </div>
+
+    <!-- ── RS Practice Done — HQ Wise Pie Chart + Breakup Table ── -->
+    <div class="hq-section-title" style="margin-top:22px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+      <h3 style="color:var(--signal-green);margin:0;">🥧 RS PRACTICE DONE — HQ WISE BREAKUP</h3>
+      <button class="hq-pdf-btn" onclick="generateRsBreakupPDF()">📄 Generate PDF</button>
+    </div>
+    <div class="rs-pie-wrap">
+      <div class="rs-pie-chart-box">
+        <svg id="rsPieChart" viewBox="0 0 220 220" width="220" height="220"></svg>
+        <div class="rs-pie-center">
+          <div class="rs-pie-total" id="rsPieTotal">0</div>
+          <div class="rs-pie-label">RS Done</div>
+          <div class="rs-pie-sub" id="rsPieSubLabel" style="font-size:9.5px;color:var(--muted);font-family:'Courier New',monospace;margin-top:2px;"></div>
+        </div>
+      </div>
+      <div class="rs-pie-table-wrap">
+        <table class="hq-desg-table" id="rsHqBreakupTable">
+          <thead>
+            <tr class="hq-thead-top">
+              <th style="width:36px;">#</th>
+              <th class="hq-col">HQ / LOBBY</th>
+              <th>TOTAL ALP<br><span style="font-size:9px;color:var(--muted);">(roster, incl. SR ALP)</span></th>
+              <th style="color:var(--signal-green);">RS COMPLETED<br><span style="font-size:9px;color:var(--muted);">(unique ALP)</span></th>
+              <th>%</th>
+              <th>NO OF TIMES (%)<br><span style="font-size:9px;color:var(--muted);">(completed RS 2+ times)</span></th>
+            </tr>
+          </thead>
+          <tbody id="rsHqBreakupBody">
+            <tr><td colspan="6" style="padding:20px;text-align:center;color:var(--muted);">Click ⟳ Refresh to load data…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
 
     <!-- ── Repeated Names — RS Practice ── -->
     <div class="hq-section-title" style="margin-top:18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
-      <h3 style="color:var(--signal-yellow);margin:0;">🔁 REPEATED NAMES — RS PRACTICE (ALP column) — Count = number of times name appears</h3>
+      <h3 style="color:var(--signal-yellow);margin:0;">🔁 REPEATED SESSIONS — RS PRACTICE (by roster ID) — Count = number of times ID appears</h3>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
         <label for="hqRepeatHqFilter" style="font-size:11px;color:var(--muted);">HQ / Lobby:</label>
         <select id="hqRepeatHqFilter" class="hq-desg-select" onchange="hqApplyRepeatFilter()">
@@ -1222,57 +1290,6 @@
         </thead>
         <tbody id="hqRepeatBody">
           <tr><td colspan="5" style="padding:20px;text-align:center;color:var(--muted);">No repeated names found.</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- ── Detail Summary: All Crew × DS/RS Status ── -->
-    <div class="hq-section-title" style="margin-top:10px;">
-      <h3 style="color:#00d4ff;">📋 DETAIL SUMMARY — ALL CREW (Name · Designation · HQ · RS Practice · Approaching Danger)</h3>
-    </div>
-    <div class="ds-search-bar">
-      <select class="ds-hq-select" id="dsDetailHQFilter" onchange="buildDetailSummary()">
-        <option value="">🏢 All HQ / Lobby</option>
-      </select>
-      <select class="ds-hq-select" id="dsDetailDesgFilter" onchange="buildDetailSummary()" style="min-width:160px;border-color:#f0b429;">
-        <option value="">🏷 All Designations</option>
-      </select>
-      <select class="ds-hq-select" id="dsDetailRSFilter" onchange="buildDetailSummary()" style="min-width:160px;border-color:#2ecc71;">
-        <option value="">🛠 RS Practice — All</option>
-        <option value="done">✔ RS Done</option>
-        <option value="not">✘ RS Not Done</option>
-      </select>
-      <select class="ds-hq-select" id="dsDetailDSFilter" onchange="buildDetailSummary()" style="min-width:180px;border-color:#e0413f;">
-        <option value="">⛔ Approaching Danger — All</option>
-        <option value="done">✔ DS Done</option>
-        <option value="not">✘ DS Not Done</option>
-      </select>
-      <span class="ds-count-badge" id="dsDetailCount">—</span>
-    </div>
-    <div class="ds-search-bar" style="margin-top:-4px;">
-      <button class="ds-filter-chip active" id="dsFiltAll" onclick="setDetailFilter('all')">All</button>
-      <button class="ds-filter-chip" id="dsFiltPending" onclick="setDetailFilter('pending')">⏳ Pending Both</button>
-      <button class="ds-filter-chip" id="dsFiltDSOnly" onclick="setDetailFilter('ds_only')">⛔ DS Done</button>
-      <button class="ds-filter-chip" id="dsFiltDSNot" onclick="setDetailFilter('ds_not')">🚫 DS Not Done</button>
-      <button class="ds-filter-chip" id="dsFiltRSOnly" onclick="setDetailFilter('rs_only')">🛠 RS Done</button>
-      <button class="ds-filter-chip" id="dsFiltRSNot" onclick="setDetailFilter('rs_not')">❌ RS Not Done</button>
-      <button class="ds-filter-chip" id="dsFiltBoth" onclick="setDetailFilter('both')">✅ Both Done</button>
-      <button class="ds-filter-chip" style="margin-left:auto;border-color:#8694a3;color:#8694a3;" onclick="clearDetailFilters()">✕ Clear</button>
-    </div>
-    <div class="detail-summary-wrap">
-      <table class="detail-summary-table" id="detailSummaryTable">
-        <thead>
-          <tr>
-            <th class="center" style="width:36px;">#</th>
-            <th>CREW NAME</th>
-            <th>DESIGNATION</th>
-            <th>HQ / LOBBY</th>
-            <th class="center" style="min-width:130px;">🛠 RS PRACTICE</th>
-            <th class="center" style="min-width:160px;">⛔ APPROACHING DANGER</th>
-          </tr>
-        </thead>
-        <tbody id="detailSummaryBody">
-          <tr><td colspan="6" style="padding:40px;text-align:center;color:var(--muted);">Click ⟳ Refresh to load…</td></tr>
         </tbody>
       </table>
     </div>
@@ -1400,7 +1417,9 @@ function findCol(cols, mustInclude, mustExclude) {
 // ── Work out which real column = which role, for each sheet ──
 function resolveColumns() {
   RESOLVED.ds = {
-    cli:  findCol(cache.ds && cache.ds.cols, ['cli']),
+    // CLI name for APPROACHING DANGER COUNSELLING sheet must always come from
+    // column H (index 7) of that sheet — fixed position, not keyword-matched.
+    cli:  (cache.ds && cache.ds.cols && cache.ds.cols.length > 7) ? cache.ds.cols[7] : null,
     crew: findCol(cache.ds && cache.ds.cols, ['crew'], ['cms', 'designation']),
     hq:   findCol(cache.ds && cache.ds.cols, ['hq']),
     // ID column — used by the Covered/Uncovered (Approaching Danger) matcher.
@@ -2087,10 +2106,19 @@ function switchTab(tab) {
 }
 
 // ── Build CLI Wise Report ──
+// mode: 'combined' (default) shows both DS + RS side by side, as before.
+// mode: 'ds' shows ONLY Approaching Danger Counselling, as its own separate table.
+// mode: 'rs' shows ONLY RS Practice, as its own separate table.
 function buildCliReport() {
   const body = document.getElementById('cliReportBody');
+  const head = document.getElementById('cliReportHead');
+  const modeEl = document.getElementById('cliReportModeFilter');
+  const mode = modeEl ? modeEl.value : 'combined';
 
   if (!cache.ds && !cache.rs) {
+    head.innerHTML = `<tr>
+      <th class="num">S.NO</th><th>CLI NAME</th><th class="num">APPROACHING SIGNAL<br><span style="color:var(--signal-red);font-size:10px;">(Danger Counselling)</span></th>
+      <th class="num">RS PRACTICE</th><th class="num">TOTAL</th><th>ACTIVITY BAR</th></tr>`;
     body.innerHTML = '<tr><td colspan="6" style="padding:40px;text-align:center;color:var(--muted);">No data loaded. Please wait for dashboard to load first.</td></tr>';
     return;
   }
@@ -2118,48 +2146,110 @@ function buildCliReport() {
     return;
   }
 
-  // Sort by total desc
+  // ── Combined view (both sheets side by side) — original behaviour ──
+  if (mode === 'combined') {
+    head.innerHTML = `<tr>
+      <th class="num">S.NO</th><th>CLI NAME</th>
+      <th class="num">APPROACHING SIGNAL<br><span style="color:var(--signal-red);font-size:10px;">(Danger Counselling)</span></th>
+      <th class="num">RS PRACTICE</th><th class="num">TOTAL</th><th>ACTIVITY BAR</th></tr>`;
+
+    const sorted = [...counts.entries()]
+      .map(([name, c]) => ({ name, ds: c.ds, rs: c.rs, total: c.ds + c.rs }))
+      .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
+
+    const maxTotal = sorted[0].total || 1;
+    let grandDS = 0, grandRS = 0, html = '';
+
+    sorted.forEach((row, i) => {
+      grandDS += row.ds;
+      grandRS += row.rs;
+      const barDSpct = Math.round((row.ds / maxTotal) * 100);
+      const barRSpct = Math.round((row.rs / maxTotal) * 100);
+      html += `<tr>
+        <td class="sno">${i + 1}</td>
+        <td class="cli-name">${esc(row.name)}</td>
+        <td class="ds-count">${row.ds || '—'}</td>
+        <td class="rs-count">${row.rs || '—'}</td>
+        <td class="total-count">${row.total}</td>
+        <td class="bar-cell">
+          <div class="cli-bar-wrap" title="DS:${row.ds} RS:${row.rs}">
+            <div class="cli-bar-ds" style="width:${barDSpct}%"></div>
+            <div class="cli-bar-rs" style="width:${barRSpct}%"></div>
+          </div>
+        </td>
+      </tr>`;
+    });
+
+    html += `<tr class="cli-grand-total">
+      <td class="sno">—</td>
+      <td style="color:#c77dff!important;font-weight:700;">GRAND TOTAL (${sorted.length} CLIs)</td>
+      <td class="ds-count" style="color:var(--signal-yellow)!important;">${grandDS}</td>
+      <td class="rs-count" style="color:var(--signal-yellow)!important;">${grandRS}</td>
+      <td class="total-count" style="color:var(--signal-yellow)!important;">${grandDS + grandRS}</td>
+      <td></td>
+    </tr>`;
+
+    body.innerHTML = html;
+    document.getElementById('cliReportMeta').textContent =
+      sorted.length + ' CLIs · DS: ' + grandDS + ' · RS: ' + grandRS + ' · Total: ' + (grandDS + grandRS);
+    const footNote = document.getElementById('cliReportFooterNote');
+    if (footNote) footNote.textContent = 'CLI WISE REPORT · RAIPUR DIVISION · BOTH SHEETS COMBINED';
+    return;
+  }
+
+  // ── Separate view — only ONE sheet's data, its own dedicated table ──
+  const isDS = mode === 'ds';
+  const key = isDS ? 'ds' : 'rs';
+  const label = isDS ? 'APPROACHING SIGNAL <span style="color:var(--signal-red);font-size:10px;">(Danger Counselling)</span>' : 'RS PRACTICE';
+  const countClass = isDS ? 'ds-count' : 'rs-count';
+  const barClass = isDS ? 'cli-bar-ds' : 'cli-bar-rs';
+
+  head.innerHTML = `<tr>
+    <th class="num">S.NO</th><th>CLI NAME</th>
+    <th class="num">${label}</th><th>ACTIVITY BAR</th></tr>`;
+
   const sorted = [...counts.entries()]
-    .map(([name, c]) => ({ name, ds: c.ds, rs: c.rs, total: c.ds + c.rs }))
-    .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
+    .map(([name, c]) => ({ name, count: c[key] }))
+    .filter(r => r.count > 0)
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
 
-  const maxTotal = sorted[0].total || 1;
-  let grandDS = 0, grandRS = 0;
+  if (sorted.length === 0) {
+    body.innerHTML = `<tr><td colspan="4" style="padding:40px;text-align:center;color:var(--muted);">No ${isDS ? 'Approaching Danger Counselling' : 'RS Practice'} data found.</td></tr>`;
+    document.getElementById('cliReportMeta').textContent = '0 CLIs';
+    return;
+  }
 
-  let html = '';
+  const maxCount = sorted[0].count || 1;
+  let grand = 0, html = '';
+
   sorted.forEach((row, i) => {
-    grandDS += row.ds;
-    grandRS += row.rs;
-    const barDSpct = Math.round((row.ds / maxTotal) * 100);
-    const barRSpct = Math.round((row.rs / maxTotal) * 100);
+    grand += row.count;
+    const pct = Math.round((row.count / maxCount) * 100);
     html += `<tr>
       <td class="sno">${i + 1}</td>
       <td class="cli-name">${esc(row.name)}</td>
-      <td class="ds-count">${row.ds || '—'}</td>
-      <td class="rs-count">${row.rs || '—'}</td>
-      <td class="total-count">${row.total}</td>
+      <td class="${countClass}">${row.count}</td>
       <td class="bar-cell">
-        <div class="cli-bar-wrap" title="DS:${row.ds} RS:${row.rs}">
-          <div class="cli-bar-ds" style="width:${barDSpct}%"></div>
-          <div class="cli-bar-rs" style="width:${barRSpct}%"></div>
+        <div class="cli-bar-wrap" title="${row.count}">
+          <div class="${barClass}" style="width:${pct}%"></div>
         </div>
       </td>
     </tr>`;
   });
 
-  // Grand total row
   html += `<tr class="cli-grand-total">
     <td class="sno">—</td>
     <td style="color:#c77dff!important;font-weight:700;">GRAND TOTAL (${sorted.length} CLIs)</td>
-    <td class="ds-count" style="color:var(--signal-yellow)!important;">${grandDS}</td>
-    <td class="rs-count" style="color:var(--signal-yellow)!important;">${grandRS}</td>
-    <td class="total-count" style="color:var(--signal-yellow)!important;">${grandDS + grandRS}</td>
+    <td class="${countClass}" style="color:var(--signal-yellow)!important;">${grand}</td>
     <td></td>
   </tr>`;
 
   body.innerHTML = html;
   document.getElementById('cliReportMeta').textContent =
-    sorted.length + ' CLIs · DS: ' + grandDS + ' · RS: ' + grandRS + ' · Total: ' + (grandDS + grandRS);
+    sorted.length + ' CLIs · ' + (isDS ? 'DS' : 'RS') + ': ' + grand;
+  const footNote = document.getElementById('cliReportFooterNote');
+  if (footNote) footNote.textContent = 'CLI WISE REPORT · RAIPUR DIVISION · ' +
+    (isDS ? 'APPROACHING DANGER COUNSELLING ONLY' : 'RS PRACTICE ONLY');
 }
 
 // ── Export CLI Wise Report as PDF ──
@@ -2172,10 +2262,16 @@ function generateCliPDF() {
   doc.setTextColor(0, 0, 0);
   const pageWidth = doc.internal.pageSize.getWidth();
 
+  const modeEl = document.getElementById('cliReportModeFilter');
+  const mode = modeEl ? modeEl.value : 'combined';
+
   let y = 32;
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(13);
-  doc.text('RAIPUR DIVISION — CLI WISE DATA REPORT', pageWidth / 2, y, { align: 'center' });
+  const titleSuffix = mode === 'ds' ? ' — APPROACHING DANGER COUNSELLING'
+                     : mode === 'rs' ? ' — RS PRACTICE'
+                     : '';
+  doc.text('RAIPUR DIVISION — CLI WISE DATA REPORT' + titleSuffix, pageWidth / 2, y, { align: 'center' });
   y += 14;
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
@@ -2192,41 +2288,82 @@ function generateCliPDF() {
   if (cache.ds && RESOLVED.ds.cli) cache.ds.rows.forEach(row => add(row[RESOLVED.ds.cli], 'ds'));
   if (cache.rs && RESOLVED.rs.cli) cache.rs.rows.forEach(row => add(row[RESOLVED.rs.cli], 'rs'));
 
-  const sorted = [...counts.entries()]
-    .map(([name, c]) => ({ name, ds: c.ds, rs: c.rs, total: c.ds + c.rs }))
-    .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
+  if (mode === 'combined') {
+    const sorted = [...counts.entries()]
+      .map(([name, c]) => ({ name, ds: c.ds, rs: c.rs, total: c.ds + c.rs }))
+      .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
 
-  let grandDS = 0, grandRS = 0;
-  const body = sorted.map((row, i) => {
-    grandDS += row.ds; grandRS += row.rs;
-    return [i + 1, row.name, row.ds || 0, row.rs || 0, row.total];
-  });
-  body.push(['—', 'GRAND TOTAL (' + sorted.length + ' CLIs)', grandDS, grandRS, grandDS + grandRS]);
+    let grandDS = 0, grandRS = 0;
+    const body = sorted.map((row, i) => {
+      grandDS += row.ds; grandRS += row.rs;
+      return [i + 1, row.name, row.ds || 0, row.rs || 0, row.total];
+    });
+    body.push(['—', 'GRAND TOTAL (' + sorted.length + ' CLIs)', grandDS, grandRS, grandDS + grandRS]);
 
-  doc.autoTable({
-    startY: y,
-    head: [['S.NO', 'CLI NAME', 'APPROACHING SIGNAL\n(Danger Counselling)', 'RS PRACTICE', 'TOTAL']],
-    body: body,
-    styles: { fontSize: 8, cellPadding: 3, textColor: [0, 0, 0] },
-    headStyles: { fillColor: [225, 225, 225], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 7.5 },
-    columnStyles: {
-      0: { halign: 'center', cellWidth: 32 },
-      2: { halign: 'center', fontStyle: 'bold' },
-      3: { halign: 'center', fontStyle: 'bold' },
-      4: { halign: 'center', fontStyle: 'bold' }
-    },
-    didParseCell: function(data) {
-      if (data.row.index === body.length - 1) {
-        data.cell.styles.fillColor = [225, 225, 225];
-        data.cell.styles.fontStyle = 'bold';
-        data.cell.styles.textColor = [0, 0, 0];
-      }
-    },
-    margin: { left: 28, right: 28 },
-    theme: 'grid'
-  });
+    doc.autoTable({
+      startY: y,
+      head: [['S.NO', 'CLI NAME', 'APPROACHING SIGNAL\n(Danger Counselling)', 'RS PRACTICE', 'TOTAL']],
+      body: body,
+      styles: { fontSize: 8, cellPadding: 3, textColor: [0, 0, 0] },
+      headStyles: { fillColor: [225, 225, 225], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 7.5 },
+      columnStyles: {
+        0: { halign: 'center', cellWidth: 32 },
+        2: { halign: 'center', fontStyle: 'bold' },
+        3: { halign: 'center', fontStyle: 'bold' },
+        4: { halign: 'center', fontStyle: 'bold' }
+      },
+      didParseCell: function(data) {
+        if (data.row.index === body.length - 1) {
+          data.cell.styles.fillColor = [225, 225, 225];
+          data.cell.styles.fontStyle = 'bold';
+          data.cell.styles.textColor = [0, 0, 0];
+        }
+      },
+      margin: { left: 28, right: 28 },
+      theme: 'grid'
+    });
+  } else {
+    // ── Separate export — only the selected sheet's data ──
+    const isDS = mode === 'ds';
+    const key = isDS ? 'ds' : 'rs';
+    const colLabel = isDS ? 'APPROACHING SIGNAL\n(Danger Counselling)' : 'RS PRACTICE';
 
-  doc.save('CLI_Wise_Report_' + new Date().toISOString().slice(0, 10) + '.pdf');
+    const sorted = [...counts.entries()]
+      .map(([name, c]) => ({ name, count: c[key] }))
+      .filter(r => r.count > 0)
+      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+
+    let grand = 0;
+    const body = sorted.map((row, i) => {
+      grand += row.count;
+      return [i + 1, row.name, row.count];
+    });
+    body.push(['—', 'GRAND TOTAL (' + sorted.length + ' CLIs)', grand]);
+
+    doc.autoTable({
+      startY: y,
+      head: [['S.NO', 'CLI NAME', colLabel]],
+      body: body,
+      styles: { fontSize: 8, cellPadding: 3, textColor: [0, 0, 0] },
+      headStyles: { fillColor: [225, 225, 225], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 7.5 },
+      columnStyles: {
+        0: { halign: 'center', cellWidth: 32 },
+        2: { halign: 'center', fontStyle: 'bold' }
+      },
+      didParseCell: function(data) {
+        if (data.row.index === body.length - 1) {
+          data.cell.styles.fillColor = [225, 225, 225];
+          data.cell.styles.fontStyle = 'bold';
+          data.cell.styles.textColor = [0, 0, 0];
+        }
+      },
+      margin: { left: 28, right: 28 },
+      theme: 'grid'
+    });
+  }
+
+  const fileSuffix = mode === 'ds' ? '_DangerCounselling' : mode === 'rs' ? '_RSPractice' : '';
+  doc.save('CLI_Wise_Report' + fileSuffix + '_' + new Date().toISOString().slice(0, 10) + '.pdf');
 }
 
 // ── LP/ALP Wise Report state ──
@@ -2736,6 +2873,22 @@ function hqRenderSummary(data) {
   buildHqSummaryTable(data);
 }
 
+// Returns a one-decimal-place % string, TRUNCATED (floored) rather than
+// rounded, so a near-100% ratio like 346/347 (99.71...%) shows the true
+// "99.7%" instead of being rounded up to a misleading "100.0%".
+// Also returns a plain numeric value (for color-class thresholds).
+// Top-level scope so it's usable from any function in this file.
+function safePct(done, total) {
+  if (!total) return { num: 0, str: '0.0' };
+  if (done <= 0) return { num: 0, str: '0.0' };
+  if (done >= total) return { num: 100, str: '100.0' };
+  const raw = (done / total) * 100;
+  let floored = Math.floor(raw * 10) / 10;
+  if (floored >= 100) floored = 99.9; // guard: never show 100.0 unless truly complete
+  if (floored <= 0) floored = 0.1;    // guard: never show 0.0 unless truly zero
+  return { num: floored, str: floored.toFixed(1) };
+}
+
 function buildHqSummaryTable(rosterData) {
   const tbody = document.getElementById('hqDesgBreakBody');
   if (!tbody) return;
@@ -2804,14 +2957,20 @@ function buildHqSummaryTable(rosterData) {
   function findLpCol(cols)  { return (cols||[]).find(c => /\blp\b/i.test(c) && !/alp|cms|hq/i.test(c)) || null; }
   function findAlpCol(cols) { return (cols||[]).find(c => /\balp\b/i.test(c) && !/cms|hq/i.test(c)) || null; }
 
-  // ── STEP 4: Count DS / RS completions per (HQ, desg) — by matching name ──
+  // ── STEP 4: Count DS / RS completions per (HQ, desg) ──
   // dsNames[hq][desg] = { names: Set<original name who completed>, raw: total row-entries (incl. repeats) }
+  // DS ("Approaching Danger") stays NAME-matched — its sheet has no reliable ID column.
+  // RS ("RS Practice") is ID-matched — the roster's cmsid is checked against the
+  // RS Practice sheet's ALP ID / generic ID column, exactly like the ID Coverage
+  // modal does. This keeps "RS Completed" here consistent with that modal's
+  // covered/uncovered counts, instead of under-counting on name-spelling mismatches.
   const dsNames = {};  // { hq: { desg: { names:Set, raw:Number } } }
   const rsNames = {};  // { hq: { desg: { names:Set, raw:Number } } }
 
   // Diagnostics: raw sheet-entry counts vs. how many we could actually match to a roster crew member.
-  const rsDiag = { totalEntries: 0, matched: 0, unmatched: 0, unmatchedNames: {}, dupeNames: {}, desgMismatch: {} };
+  const rsDiag = { idColFound: false, totalIdEntries: 0, idMatched: 0, idUnmatched: 0, noId: 0, orphanIds: {}, dupeNames: {} };
   const dsDiag = { totalEntries: 0, matched: 0, unmatched: 0 };
+  const hqRepeat2Plus = {}; // { hq: count of ALP/SR-ALP crew who completed RS Practice 2+ times } — for the breakup table
   const isAlpFamily = d => d === 'ALP' || d === 'SR ALP';
 
   function addCount(store, hq, desg, name) {
@@ -2841,49 +3000,49 @@ function buildHqSummaryTable(rosterData) {
   }
 
   if (cache.rs && cache.rs.rows) {
-    const hqCol  = findHqCol(cache.rs.cols);
-    const alpCol = findAlpCol(cache.rs.cols) || RESOLVED.rs.alp;
-    const seenNorm = {}; // track occurrence count per normalized name (for duplicate diagnostics)
-    const seenInfo = {}; // { nrm: { name, hq, desg } } — last-seen HQ/desg for display in repeat table
+    const idCols = [RESOLVED.rs.alpId, RESOLVED.rs.genId].filter(Boolean);
+    rsDiag.idColFound = idCols.length > 0;
+
+    // Every ID found in the RS Practice sheet, with how many times it repeats
+    // (e.g. the same ALP practiced on 3 different rows → count 3).
+    const rsIdCounts = new Map();
     cache.rs.rows.forEach(row => {
-      // HQ Wise Summary's RS Practice counts are ALP-only — the LP name column
-      // is intentionally excluded here.
-      [alpCol].forEach(col => {
-        if (!col) return;
-        const nm = (row[col] || '').trim();
-        if (!nm) return;
-        rsDiag.totalEntries++;
-        const nrm = normName(nm);
-        seenNorm[nrm] = (seenNorm[nrm] || 0) + 1;
-        let hq = hqCol ? (row[hqCol] || '').trim() : '';
-        if (!hq) hq = nameToHq[nrm] || '';
-        const desg = nameToDesg[nrm] || 'OTHER';
-        const dispName = normToOrig[nrm] || nm;
-        seenInfo[nrm] = { name: dispName, hq: hq || nameToHq[nrm] || 'UNKNOWN', desg };
-        if (nameToHq[nrm]) {
-          rsDiag.matched++;
-        } else {
-          rsDiag.unmatched++;
-          rsDiag.unmatchedNames[nm] = (rsDiag.unmatchedNames[nm] || 0) + 1;
-        }
-        // RS Practice (ALP column) should only ever populate ALP / SR ALP rows.
-        // If the roster lists this matched name under an LP-family designation
-        // (LP, LPM, LPP, LPG, etc.), don't create a phantom LP row for it —
-        // flag it as a designation mismatch instead so it can be reconciled.
-        if (!isAlpFamily(desg)) {
-          if (nameToHq[nrm]) {
-            rsDiag.desgMismatch[dispName] = { hq, rosterDesg: desg, count: (rsDiag.desgMismatch[dispName]?.count || 0) + 1 };
-          }
-          return;
-        }
-        addCount(rsNames, hq, desg, dispName);
+      idCols.forEach(col => {
+        const id = normId(row[col]);
+        if (id) rsIdCounts.set(id, (rsIdCounts.get(id) || 0) + 1);
       });
     });
-    Object.entries(seenNorm).forEach(([nrm, n]) => {
-      const info = seenInfo[nrm] || {};
-      rsDiag.dupeRecords = rsDiag.dupeRecords || [];
-      rsDiag.dupeRecords.push({ name: info.name || normToOrig[nrm] || nrm, hq: info.hq || 'UNKNOWN', desg: info.desg || 'OTHER', count: n });
-      if (n > 1) rsDiag.dupeNames[info.name || normToOrig[nrm] || nrm] = n;
+    rsDiag.totalIdEntries = [...rsIdCounts.values()].reduce((s, n) => s + n, 0);
+
+    // Check every roster ALP/SR-ALP crew member's own ID against that set.
+    const rosterIds = new Set();
+    rosterData.forEach(c => {
+      const desg = normalizeDesg(c.desg);
+      if (!isAlpFamily(desg)) return;
+      const hq = (c.hq || 'UNKNOWN').trim();
+      const name = c.name.trim();
+      const id = normId(c.cmsid);
+      if (id) rosterIds.add(id);
+      if (!id) { rsDiag.noId++; return; }
+      const occ = rsIdCounts.get(id) || 0;
+      if (occ > 0) {
+        rsDiag.idMatched++;
+        addCount(rsNames, hq, desg, name);
+        rsNames[hq][desg].raw += (occ - 1); // addCount already counted 1 occurrence
+        rsDiag.dupeRecords = rsDiag.dupeRecords || [];
+        rsDiag.dupeRecords.push({ name, hq, desg, count: occ });
+        if (occ > 1) rsDiag.dupeNames[name] = occ;
+        if (occ >= 2) hqRepeat2Plus[hq] = (hqRepeat2Plus[hq] || 0) + 1;
+      } else {
+        rsDiag.idUnmatched++;
+      }
+    });
+
+    // IDs present in the RS Practice sheet that don't belong to any ALP/SR-ALP
+    // roster member — likely typos in the sheet's ID column, or entries for
+    // staff missing from (or misclassified in) the roster.
+    rsIdCounts.forEach((count, id) => {
+      if (id && !rosterIds.has(id)) rsDiag.orphanIds[id] = count;
     });
   }
 
@@ -2892,14 +3051,16 @@ function buildHqSummaryTable(rosterData) {
 
   function pctBadge(done, total) {
     if (!total) return '<span class="n-none">—</span>';
-    const p = Math.round((done / total) * 100);
-    const cls = p >= 75 ? 'hi' : p >= 40 ? 'mid' : 'lo';
-    return `<span class="pct-badge ${cls}">${p}%</span>`;
+    const p = safePct(done, total);
+    const cls = p.num >= 75 ? 'hi' : p.num >= 40 ? 'mid' : 'lo';
+    return `<span class="pct-badge ${cls}">${p.str}%</span>`;
   }
 
   let html = '';
   // Grand totals
-  let gTotal=0, gDS=0, gRS=0, gRsRaw=0, gBoth=0, gPending=0;
+  let gTotal=0, gDS=0, gRS=0, gRsRaw=0, gBoth=0, gPending=0, gAlpFamily=0;
+  const hqRsTotals  = {};   // { hq: rsDone } — used for the RS Practice pie chart / breakup table
+  const hqAlpTotals = {};   // { hq: total ALP+SR ALP roster crew } — used for the same breakup table
 
   allHQs.forEach(hq => {
     const desgMap = hqDesgMap[hq];
@@ -2909,7 +3070,7 @@ function buildHqSummaryTable(rosterData) {
       ...Object.keys(desgMap).filter(d => !DESG_ORDER.includes(d)).sort()
     ];
 
-    let hqTotal=0, hqDS=0, hqRS=0, hqRsRaw=0, hqBoth=0, hqPending=0;
+    let hqTotal=0, hqDS=0, hqRS=0, hqRsRaw=0, hqBoth=0, hqPending=0, hqAlpFamily=0;
 
     // HQ group header
     html += `<tr class="hq-group-header">
@@ -2932,6 +3093,7 @@ function buildHqSummaryTable(rosterData) {
       hqTotal   += total;   hqDS   += dsDone;
       hqRS      += rsDone;  hqBoth += bothDone;
       hqPending += pending; hqRsRaw += rsRaw;
+      if (isAlpFamily(desg)) hqAlpFamily += total;
 
       const pendingCrew = [...crewSet].filter(n => !dsSet.has(n) && !rsSet.has(n));
       const pendingCell = pending > 0
@@ -2954,6 +3116,9 @@ function buildHqSummaryTable(rosterData) {
 
     // HQ subtotal row
     gTotal+=hqTotal; gDS+=hqDS; gRS+=hqRS; gRsRaw+=hqRsRaw; gBoth+=hqBoth; gPending+=hqPending;
+    gAlpFamily += hqAlpFamily;
+    hqRsTotals[hq]  = hqRS;
+    hqAlpTotals[hq] = hqAlpFamily;
     const hqAllPendingCrew = hqDesgs.flatMap(d => {
       const cs = desgMap[d] || new Set();
       const ds2 = (dsNames[hq] && dsNames[hq][d]) ? dsNames[hq][d].names : new Set();
@@ -2993,31 +3158,31 @@ function buildHqSummaryTable(rosterData) {
   </tr>`;
 
   // ── STEP 6: Diagnostics note — explains any gap between raw RS Practice
-  // sheet entries (e.g. 340) and the "RS Done" unique-crew count (e.g. 175) ──
+  // sheet ID entries and the "RS Done" unique-crew count ──
   const diagNote = document.getElementById('hqRsDiagNote');
   if (diagNote) {
     const dupeList = Object.entries(rsDiag.dupeNames).sort((a,b)=>b[1]-a[1]);
     const dupeExtra = dupeList.reduce((s,[,n]) => s + (n-1), 0); // sessions beyond the 1st per person
-    const unmatchedList = Object.entries(rsDiag.unmatchedNames).sort((a,b)=>b[1]-a[1]);
-    let note = `<b style="color:#8fd6c4;">🛠 RS PRACTICE — reconciliation:</b> `
-      + `${rsDiag.totalEntries} raw entries (ALP name column only, incl. repeat sessions) in RS Practice sheet `
-      + `→ ${rsDiag.matched} matched a roster crew member, ${rsDiag.unmatched} did not match any roster name even after ignoring case/spacing. `
-      + `Grand total "RS Entries" column above = ${gRsRaw} (should reconcile to the ALP-designation portion of the matched entries). `
-      + `"RS Done" (${gRS}) is the count of <u>unique</u> ALP crew who did at least one RS session — it will always be ≤ RS Entries when the same person practiced more than once. `
-      + `LP name column entries are excluded from this report, and only ALP / SR ALP rows carry RS Practice numbers.`;
+    const orphanList = Object.entries(rsDiag.orphanIds).sort((a,b)=>b[1]-a[1]);
+    let note = `<b style="color:#8fd6c4;">🛠 RS PRACTICE — reconciliation (ID-matched, same method as the ID Coverage report):</b> `;
+    if (!rsDiag.idColFound) {
+      note += `No ALP ID / ID column could be found in the RS Practice sheet, so nothing could be matched.`;
+    } else {
+      note += `${rsDiag.totalIdEntries} raw ID entries (incl. repeat sessions) in RS Practice sheet `
+        + `→ ${rsDiag.idMatched} roster ALP/SR-ALP crew matched by ID, ${rsDiag.idUnmatched} roster ALP/SR-ALP crew had no matching ID in the sheet`
+        + (rsDiag.noId ? `, ${rsDiag.noId} roster ALP/SR-ALP crew have no ID on file so couldn't be checked` : '') + `. `
+        + `Grand total "RS Entries" column above = ${gRsRaw} (total sessions across all matched crew). `
+        + `"RS Done" (${gRS}) is the count of <u>unique</u> ALP crew whose roster ID appears at least once in the RS Practice sheet — it will always be ≤ RS Entries when the same person practiced more than once. `
+        + `Only ALP / SR ALP crew are checked; LP-family designations don't carry RS Practice numbers.`;
+    }
     if (dupeList.length) {
-      note += `<br><b style="color:var(--signal-yellow);">🔁 Repeated names (practiced more than once):</b> ${dupeList.length} crew member(s), contributing ${dupeExtra} extra session-entries beyond their first. `
+      note += `<br><b style="color:var(--signal-yellow);">🔁 Repeated sessions (same ID, more than once):</b> ${dupeList.length} crew member(s), contributing ${dupeExtra} extra session-entries beyond their first. `
         + `Top repeats: ` + dupeList.slice(0,8).map(([n,c]) => `${esc(n)} (${c}×)`).join(', ') + (dupeList.length>8 ? ', …' : '') + '.';
     }
-    const mismatchList = Object.entries(rsDiag.desgMismatch);
-    if (mismatchList.length) {
-      note += `<br><b style="color:var(--signal-yellow);">🔀 Roster designation ≠ ALP:</b> ${mismatchList.length} name(s) found in the RS Practice sheet's ALP column, but the roster lists them under a non-ALP designation — excluded from every LP/LPM/LPP/LPG row so those rows show zero RS numbers. `
-        + `Names: ` + mismatchList.slice(0,10).map(([n,v]) => `${esc(n)} (roster: ${esc(v.rosterDesg)}, HQ: ${esc(v.hq)})`).join(', ') + (mismatchList.length>10 ? ', …' : '') + `. Verify whether these staff are actually ALP or the sheet/roster designation needs correcting.`;
-    }
-    if (unmatchedList.length) {
-      note += `<br><b style="color:var(--signal-red);">⚠ Names in RS Practice sheet not found in roster:</b> ${unmatchedList.length} distinct name(s), ${rsDiag.unmatched} total entries — these are NOT counted in any HQ/designation row above. `
-        + `Check for typos vs. the roster, staff missing from the roster sheet, or blank/placeholder rows. Examples: `
-        + unmatchedList.slice(0,10).map(([n,c]) => `${esc(n)} (${c}×)`).join(', ') + (unmatchedList.length>10 ? ', …' : '') + '.';
+    if (orphanList.length) {
+      note += `<br><b style="color:var(--signal-red);">⚠ IDs in RS Practice sheet not matching any ALP/SR-ALP roster member:</b> ${orphanList.length} distinct ID(s) — these are NOT counted in any HQ/designation row above. `
+        + `Check for typos vs. the roster, staff missing from (or misclassified in) the roster, or blank/placeholder rows. Examples: `
+        + orphanList.slice(0,10).map(([id,c]) => `${esc(id)} (${c}×)`).join(', ') + (orphanList.length>10 ? ', …' : '') + '.';
     }
     diagNote.innerHTML = note;
   }
@@ -3028,6 +3193,282 @@ function buildHqSummaryTable(rosterData) {
   hqApplyRepeatFilter();
 
   tbody.innerHTML = html;
+
+  // ── STEP 8: RS Practice Done — HQ Wise pie chart + breakup table ──
+  const gRepeat2Plus = Object.values(hqRepeat2Plus).reduce((s, n) => s + n, 0);
+  renderRsHqBreakup(hqRsTotals, gRS, hqAlpTotals, gAlpFamily, hqRepeat2Plus, gRepeat2Plus);
+}
+
+// ── RS Practice Done — HQ Wise pie chart + breakup table ──
+const RS_PIE_COLORS = ['#2bb673','#4d8fd6','#f0b429','#e0413f','#9b59b6','#00d4ff','#ff8c42','#8fd6c4','#c77dff','#ffe680','#6dd3ff','#f28fb0','#7fd858','#d68f4d','#5c9ded'];
+
+function renderRsHqBreakup(hqRsTotals, grandTotal, hqAlpTotals, grandAlpTotal, hqRepeat2Plus, grandRepeat2Plus) {
+  const svg    = document.getElementById('rsPieChart');
+  const body   = document.getElementById('rsHqBreakupBody');
+  const totalEl= document.getElementById('rsPieTotal');
+  const subEl  = document.getElementById('rsPieSubLabel');
+  if (!svg || !body) return;
+
+  hqAlpTotals   = hqAlpTotals || {};
+  grandAlpTotal = grandAlpTotal || 0;
+  hqRepeat2Plus = hqRepeat2Plus || {};
+  grandRepeat2Plus = grandRepeat2Plus || 0;
+
+  // Every HQ that has ALP+SR ALP roster crew and/or an RS-done count, sorted
+  // by Total ALP desc (falls back to RS Done desc when ALP totals aren't available).
+  const hqSet = new Set([...Object.keys(hqRsTotals || {}), ...Object.keys(hqAlpTotals)]);
+  const entries = [...hqSet]
+    .map(hq => [hq, (hqRsTotals && hqRsTotals[hq]) || 0, hqAlpTotals[hq] || 0, hqRepeat2Plus[hq] || 0])
+    .filter(([, rs, alp]) => rs > 0 || alp > 0)
+    .sort((a, b) => b[2] - a[2] || b[1] - a[1]);
+
+  totalEl.textContent = grandTotal || 0;
+  if (subEl) subEl.textContent = grandAlpTotal ? ('of ' + grandAlpTotal + ' ALP') : '';
+
+  if (entries.length === 0 || !grandTotal) {
+    svg.innerHTML = `<circle cx="110" cy="110" r="95" fill="none" stroke="#232c38" stroke-width="26"/>`;
+    body.innerHTML = '<tr><td colspan="6" style="padding:20px;text-align:center;color:var(--muted);">No RS Practice completions found.</td></tr>';
+    return;
+  }
+
+  // ── Build donut slices (share of total RS Done, per HQ) ──
+  const cx = 110, cy = 110, r = 95, strokeW = 34;
+  const circumference = 2 * Math.PI * r;
+  let offset = 0;
+  let svgHtml = '';
+
+  entries.forEach(([hq, rsVal], i) => {
+    const frac = grandTotal ? (rsVal / grandTotal) : 0;
+    const dash = frac * circumference;
+    const color = RS_PIE_COLORS[i % RS_PIE_COLORS.length];
+    svgHtml += `<circle class="rs-pie-slice" cx="${cx}" cy="${cy}" r="${r}" fill="none"
+      stroke="${color}" stroke-width="${strokeW}"
+      stroke-dasharray="${dash} ${circumference - dash}"
+      stroke-dashoffset="${-offset}"
+      transform="rotate(-90 ${cx} ${cy})">
+      <title>${esc(hq)}: ${rsVal} RS Done (${Math.round(frac*100)}% of total RS Done)</title>
+    </circle>`;
+    offset += dash;
+  });
+
+  svg.innerHTML = svgHtml;
+
+  // ── Build breakup table: HQ · Total ALP · RS Completed · % · No Of Times (%) ──
+  // Wrapped in try/catch: if anything here throws, show the actual error in
+  // the table instead of silently leaving the old "Click Refresh" placeholder
+  // (which made a real bug look like "table never loaded").
+  try {
+    let tblHtml = '';
+    entries.forEach(([hq, rsVal, alpVal, repeat2Val], i) => {
+      const pct = safePct(rsVal, alpVal);
+      const pctCls = pct.num >= 75 ? 'hi' : pct.num >= 40 ? 'mid' : 'lo';
+      const repeatPct = safePct(repeat2Val, alpVal);
+      const repeatCls = repeatPct.num >= 75 ? 'hi' : repeatPct.num >= 40 ? 'mid' : 'lo';
+      const color = RS_PIE_COLORS[i % RS_PIE_COLORS.length];
+      tblHtml += `<tr>
+        <td class="sno" style="text-align:center;color:var(--muted);font-family:'Courier New',monospace;font-size:11px;">${i+1}</td>
+        <td class="hq-col"><span class="rs-pie-legend-dot" style="background:${color};"></span>${esc(hq)}</td>
+        <td style="text-align:center;font-weight:700;color:#fff;font-family:'Courier New',monospace;">${alpVal}</td>
+        <td style="text-align:center;font-weight:700;color:var(--signal-green);font-family:'Courier New',monospace;">${rsVal}</td>
+        <td style="text-align:center;"><span class="pct-badge ${pctCls}">${pct.str}%</span></td>
+        <td style="text-align:center;"><span class="pct-badge ${repeatCls}">${repeatPct.str}%</span></td>
+      </tr>`;
+    });
+    const grandPct = safePct(grandTotal, grandAlpTotal);
+    const grandRepeatPct = safePct(grandRepeat2Plus, grandAlpTotal);
+    tblHtml += `<tr class="hq-grand-row">
+      <td class="hq-col" colspan="2">🏆 GRAND TOTAL (${entries.length} HQs)</td>
+      <td style="text-align:center;">${grandAlpTotal}</td>
+      <td style="text-align:center;">${grandTotal}</td>
+      <td style="text-align:center;">${grandPct.str}%</td>
+      <td style="text-align:center;">${grandRepeatPct.str}%</td>
+    </tr>`;
+
+    body.innerHTML = tblHtml;
+
+    // Cache exactly what's on screen so the PDF export matches it precisely
+    // (including each row's donut slice color, so the PDF pie chart matches too).
+    window.rsBreakupPdfData = {
+      rows: entries.map(([hq, rsVal, alpVal, repeat2Val], i) => ({
+        hq, alpVal, rsVal,
+        pct: safePct(rsVal, alpVal).str,
+        repeatPct: safePct(repeat2Val, alpVal).str,
+        color: RS_PIE_COLORS[i % RS_PIE_COLORS.length]
+      })),
+      grandTotal, grandAlpTotal,
+      grandPct: grandPct.str,
+      grandRepeatPct: grandRepeatPct.str,
+      hqCount: entries.length
+    };
+  } catch (err) {
+    console.error('renderRsHqBreakup table build failed:', err);
+    body.innerHTML = `<tr><td colspan="6" style="padding:20px;text-align:center;color:var(--signal-red);">⚠ Table failed to render: ${esc(err.message)}</td></tr>`;
+  }
+}
+
+// ── Export "RS Practice Done — HQ Wise Breakup" as PDF ──
+// Mirrors exactly what's on screen (same rows, same % values), using the
+// data cached by renderRsHqBreakup() so the PDF can't drift from the table.
+
+// Draws the same donut chart shown on screen onto an offscreen canvas
+// (same colors/order/proportions) and returns a PNG data URL to embed in the PDF.
+function buildRsDonutImage(rows, grandTotal, grandAlpTotal) {
+  const size = 640; // high-res source, scaled down when placed in the PDF
+  const canvas = document.createElement('canvas');
+  canvas.width = size; canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  const cx = size / 2, cy = size / 2, r = size * 0.36, strokeW = size * 0.155;
+  const total = grandTotal || rows.reduce((s, row) => s + row.rsVal, 0) || 1;
+
+  let startAngle = -Math.PI / 2;
+  rows.forEach(row => {
+    const frac = row.rsVal / total;
+    const angle = frac * Math.PI * 2;
+    if (angle > 0.0002) {
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, startAngle, startAngle + angle);
+      ctx.lineWidth = strokeW;
+      ctx.strokeStyle = row.color;
+      ctx.stroke();
+    }
+    startAngle += angle;
+  });
+
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#e7edf3';
+  ctx.font = 'bold ' + Math.round(size * 0.135) + 'px Arial, sans-serif';
+  ctx.fillText(String(grandTotal), cx, cy - size * 0.045);
+  ctx.fillStyle = '#8fd6c4';
+  ctx.font = Math.round(size * 0.05) + 'px Arial, sans-serif';
+  ctx.fillText('RS DONE', cx, cy + size * 0.06);
+  ctx.fillStyle = '#8694a3';
+  ctx.font = Math.round(size * 0.04) + 'px Arial, sans-serif';
+  ctx.fillText('of ' + grandAlpTotal + ' ALP', cx, cy + size * 0.115);
+
+  return canvas.toDataURL('image/png');
+}
+
+function hexToRgb(hex) {
+  const h = hex.replace('#', '');
+  return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
+}
+
+function generateRsBreakupPDF() {
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    alert('PDF library not loaded. Check internet connection.'); return;
+  }
+  const data = window.rsBreakupPdfData;
+  if (!data || !data.rows || !data.rows.length) {
+    alert('No RS Practice breakup data loaded yet. Click ⟳ Refresh first.'); return;
+  }
+
+  // ── Dashboard dark theme colors (matching the on-screen CSS) ──
+  const COL_BG        = [11, 15, 20];    // --bg
+  const COL_PANEL     = [17, 22, 29];    // --panel
+  const COL_LINE      = [35, 44, 56];    // --line
+  const COL_MUTED     = [134, 148, 163]; // --muted
+  const COL_TEXT      = [231, 237, 243]; // --text
+  const COL_CYAN      = [0, 212, 255];   // hq column / headers
+  const COL_GREEN     = [43, 182, 115];  // --signal-green
+  const COL_YELLOW    = [240, 180, 41];  // --signal-yellow
+  const COL_HEAD_BG   = [8, 21, 32];     // #081520
+  const COL_ROW_ALT   = [14, 19, 25];    // #0e1319
+  const COL_BADGE_HI  = { bg: [42, 40, 0],  text: [255, 230, 128] };
+  const COL_BADGE_MID = { bg: [42, 26, 6],  text: [240, 180, 41] };
+  const COL_BADGE_LO  = { bg: [42, 20, 20], text: [224, 65, 63] };
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+
+  const paintBg = () => { doc.setFillColor(...COL_BG); doc.rect(0, 0, pageWidth, pageHeight, 'F'); };
+  paintBg();
+
+  let y = 34;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(15);
+  doc.setTextColor(...COL_GREEN);
+  doc.text('RS PRACTICE DONE — HQ WISE BREAKUP', pageWidth / 2, y, { align: 'center' });
+  y += 15;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(...COL_MUTED);
+  doc.text('RAIPUR DIVISION  |  Generated: ' + new Date().toLocaleString('en-IN'), pageWidth / 2, y, { align: 'center' });
+  y += 22;
+
+  // ── Donut chart panel (left) ──
+  const panelX = 34, panelY = y, panelW = 232, panelH = 232;
+  doc.setFillColor(...COL_PANEL);
+  doc.setDrawColor(...COL_LINE);
+  doc.roundedRect(panelX, panelY, panelW, panelH, 8, 8, 'FD');
+
+  const donutImg = buildRsDonutImage(data.rows, data.grandTotal, data.grandAlpTotal);
+  const imgSize = 196;
+  doc.addImage(donutImg, 'PNG', panelX + (panelW - imgSize) / 2, panelY + (panelH - imgSize) / 2, imgSize, imgSize);
+
+  // Legend under the donut panel
+  let legendY = panelY + panelH + 20;
+  doc.setFontSize(8.5);
+  doc.setFont('helvetica', 'normal');
+  data.rows.forEach(row => {
+    if (legendY > pageHeight - 24) return; // guard against overflow off the page
+    doc.setFillColor(...hexToRgb(row.color));
+    doc.rect(panelX, legendY - 7, 8, 8, 'F');
+    doc.setTextColor(...COL_TEXT);
+    doc.text(row.hq + '  (' + row.rsVal + ')', panelX + 13, legendY);
+    legendY += 14;
+  });
+
+  // ── Breakup table (right) ──
+  const tableX = panelX + panelW + 26;
+  const tableWidth = pageWidth - tableX - 34;
+
+  const body = data.rows.map((r, i) => [i + 1, r.hq, r.alpVal, r.rsVal, r.pct + '%', r.repeatPct + '%']);
+  const grandRowIndex = body.length;
+  body.push(['🏆', 'GRAND TOTAL (' + data.hqCount + ' HQs)', data.grandAlpTotal, data.grandTotal, data.grandPct + '%', data.grandRepeatPct + '%']);
+
+  doc.autoTable({
+    startY: panelY,
+    margin: { left: tableX, right: 34, top: 34, bottom: 34 },
+    tableWidth: tableWidth,
+    head: [['#', 'HQ / LOBBY', 'TOTAL ALP', 'RS COMPLETED', '%', 'NO OF TIMES (%)']],
+    body: body,
+    styles: {
+      fontSize: 9, cellPadding: 6, halign: 'center',
+      textColor: COL_TEXT, fillColor: COL_PANEL,
+      lineColor: COL_LINE, lineWidth: 0.6
+    },
+    columnStyles: {
+      0: { textColor: COL_MUTED, cellWidth: 26 },
+      1: { halign: 'left', textColor: COL_CYAN, fontStyle: 'bold' },
+      2: { textColor: [255, 255, 255], fontStyle: 'bold' },
+      3: { textColor: COL_GREEN, fontStyle: 'bold' }
+    },
+    headStyles: { fillColor: COL_HEAD_BG, textColor: COL_CYAN, fontSize: 8.5, halign: 'center' },
+    alternateRowStyles: { fillColor: COL_ROW_ALT },
+    didParseCell: function (d) {
+      if (d.section === 'body' && (d.column.index === 4 || d.column.index === 5)) {
+        const val = parseFloat(d.cell.raw);
+        if (!isNaN(val)) {
+          const badge = val >= 75 ? COL_BADGE_HI : val >= 40 ? COL_BADGE_MID : COL_BADGE_LO;
+          d.cell.styles.fillColor = badge.bg;
+          d.cell.styles.textColor = badge.text;
+          d.cell.styles.fontStyle = 'bold';
+        }
+      }
+      if (d.row.index === grandRowIndex && d.section === 'body') {
+        d.cell.styles.fillColor = COL_HEAD_BG;
+        d.cell.styles.fontStyle = 'bold';
+        d.cell.styles.textColor = d.column.index === 1 ? COL_CYAN : COL_YELLOW;
+      }
+    },
+    willDrawPage: paintBg, // keep the dark background on every page (multi-page tables)
+    theme: 'grid'
+  });
+
+  doc.save('RS_Practice_HQ_Breakup_' + new Date().toISOString().slice(0, 10) + '.pdf');
 }
 
 // ── Render / filter the Repeated Names — RS Practice table ──
@@ -3360,7 +3801,7 @@ function generateHqPDF() {
     });
   }
 
-  const pctStr = (done, total) => total ? Math.round(done/total*100)+'%' : '—';
+  const pctStr = (done, total) => total ? safePct(done, total).str+'%' : '—';
 
   const bodyRows = [];
   let gTotal=0, gDS=0, gRS=0, gBoth=0, gPending=0;
