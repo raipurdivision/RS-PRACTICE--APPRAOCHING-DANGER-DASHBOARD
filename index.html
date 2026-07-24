@@ -15,6 +15,7 @@
 
 
 
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -3398,36 +3399,20 @@ function generateRsBreakupPDF() {
   doc.text('RAIPUR DIVISION  |  Generated: ' + new Date().toLocaleString('en-IN'), pageWidth / 2, y, { align: 'center' });
   y += 22;
 
-  // ── Donut chart panel (left) ──
+  // ── Layout: donut panel (left) + breakup table (right) ──
+  // NOTE: autoTable's willDrawPage hook repaints the whole page background
+  // right before it draws the table, which would erase anything drawn
+  // earlier in the same page. So the table is drawn FIRST, and the donut
+  // panel + legend are drawn AFTER (on top), once we know which page the
+  // table left us on.
   const panelX = 34, panelY = y, panelW = 232, panelH = 232;
-  doc.setFillColor(...COL_PANEL);
-  doc.setDrawColor(...COL_LINE);
-  doc.roundedRect(panelX, panelY, panelW, panelH, 8, 8, 'FD');
 
-  const donutImg = buildRsDonutImage(data.rows, data.grandTotal, data.grandAlpTotal);
-  const imgSize = 196;
-  doc.addImage(donutImg, 'PNG', panelX + (panelW - imgSize) / 2, panelY + (panelH - imgSize) / 2, imgSize, imgSize);
-
-  // Legend under the donut panel
-  let legendY = panelY + panelH + 20;
-  doc.setFontSize(8.5);
-  doc.setFont('helvetica', 'normal');
-  data.rows.forEach(row => {
-    if (legendY > pageHeight - 24) return; // guard against overflow off the page
-    doc.setFillColor(...hexToRgb(row.color));
-    doc.rect(panelX, legendY - 7, 8, 8, 'F');
-    doc.setTextColor(...COL_TEXT);
-    doc.text(row.hq + '  (' + row.rsVal + ')', panelX + 13, legendY);
-    legendY += 14;
-  });
-
-  // ── Breakup table (right) ──
   const tableX = panelX + panelW + 26;
   const tableWidth = pageWidth - tableX - 34;
 
   const body = data.rows.map((r, i) => [i + 1, r.hq, r.alpVal, r.rsVal, r.pct + '%', r.repeatPct + '%']);
   const grandRowIndex = body.length;
-  body.push(['🏆', 'GRAND TOTAL (' + data.hqCount + ' HQs)', data.grandAlpTotal, data.grandTotal, data.grandPct + '%', data.grandRepeatPct + '%']);
+  body.push(['', 'GRAND TOTAL (' + data.hqCount + ' HQs)', data.grandAlpTotal, data.grandTotal, data.grandPct + '%', data.grandRepeatPct + '%']);
 
   doc.autoTable({
     startY: panelY,
@@ -3466,6 +3451,32 @@ function generateRsBreakupPDF() {
     },
     willDrawPage: paintBg, // keep the dark background on every page (multi-page tables)
     theme: 'grid'
+  });
+
+  // ── Now draw the donut panel + chart + legend on top of page 1 ──
+  // (autoTable may have moved the "current page" forward for a long table;
+  // the donut always belongs on page 1 next to the header.)
+  doc.setPage(1);
+
+  doc.setFillColor(...COL_PANEL);
+  doc.setDrawColor(...COL_LINE);
+  doc.roundedRect(panelX, panelY, panelW, panelH, 8, 8, 'FD');
+
+  const donutImg = buildRsDonutImage(data.rows, data.grandTotal, data.grandAlpTotal);
+  const imgSize = 196;
+  doc.addImage(donutImg, 'PNG', panelX + (panelW - imgSize) / 2, panelY + (panelH - imgSize) / 2, imgSize, imgSize);
+
+  // Legend under the donut panel
+  let legendY = panelY + panelH + 20;
+  doc.setFontSize(8.5);
+  doc.setFont('helvetica', 'normal');
+  data.rows.forEach(row => {
+    if (legendY > pageHeight - 24) return; // guard against overflow off the page
+    doc.setFillColor(...hexToRgb(row.color));
+    doc.rect(panelX, legendY - 7, 8, 8, 'F');
+    doc.setTextColor(...COL_TEXT);
+    doc.text(row.hq + '  (' + row.rsVal + ')', panelX + 13, legendY);
+    legendY += 14;
   });
 
   doc.save('RS_Practice_HQ_Breakup_' + new Date().toISOString().slice(0, 10) + '.pdf');
