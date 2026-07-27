@@ -16,6 +16,7 @@
 
 
 
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1025,6 +1026,10 @@
           <option value="combined">🔀 Both — Combined View</option>
           <option value="ds">⛔ Approaching Danger Counselling — Separately</option>
           <option value="rs">🛠 RS Practice — Separately</option>
+        </select>
+        <select class="styled-select" id="cliReportSortFilter" onchange="buildCliReport()" style="min-width:200px;border-color:#9b59b6;">
+          <option value="total">🔢 Sort by Total (High→Low)</option>
+          <option value="name">🔤 Sort by CLI Name (A→Z)</option>
         </select>
         <span class="cli-report-meta" id="cliReportMeta">—</span>
         <button class="cli-pdf-btn" onclick="generateCliPDF()">📄 Export PDF</button>
@@ -2115,6 +2120,11 @@ function buildCliReport() {
   const head = document.getElementById('cliReportHead');
   const modeEl = document.getElementById('cliReportModeFilter');
   const mode = modeEl ? modeEl.value : 'combined';
+  const sortEl = document.getElementById('cliReportSortFilter');
+  const sortMode = sortEl ? sortEl.value : 'total';
+  const cmpRows = (a, b) => sortMode === 'name'
+    ? a.name.localeCompare(b.name)
+    : (b.total - a.total || a.name.localeCompare(b.name));
 
   if (!cache.ds && !cache.rs) {
     head.innerHTML = `<tr>
@@ -2156,7 +2166,7 @@ function buildCliReport() {
 
     const sorted = [...counts.entries()]
       .map(([name, c]) => ({ name, ds: c.ds, rs: c.rs, total: c.ds + c.rs }))
-      .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
+      .sort(cmpRows);
 
     const maxTotal = sorted[0].total || 1;
     let grandDS = 0, grandRS = 0, html = '';
@@ -2212,7 +2222,9 @@ function buildCliReport() {
   const sorted = [...counts.entries()]
     .map(([name, c]) => ({ name, count: c[key] }))
     .filter(r => r.count > 0)
-    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+    .sort(sortMode === 'name'
+      ? (a, b) => a.name.localeCompare(b.name)
+      : (a, b) => b.count - a.count || a.name.localeCompare(b.name));
 
   if (sorted.length === 0) {
     body.innerHTML = `<tr><td colspan="4" style="padding:40px;text-align:center;color:var(--muted);">No ${isDS ? 'Approaching Danger Counselling' : 'RS Practice'} data found.</td></tr>`;
@@ -2265,6 +2277,8 @@ function generateCliPDF() {
 
   const modeEl = document.getElementById('cliReportModeFilter');
   const mode = modeEl ? modeEl.value : 'combined';
+  const sortEl = document.getElementById('cliReportSortFilter');
+  const sortMode = sortEl ? sortEl.value : 'total';
 
   let y = 32;
   doc.setFont('helvetica', 'bold');
@@ -2292,7 +2306,9 @@ function generateCliPDF() {
   if (mode === 'combined') {
     const sorted = [...counts.entries()]
       .map(([name, c]) => ({ name, ds: c.ds, rs: c.rs, total: c.ds + c.rs }))
-      .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
+      .sort(sortMode === 'name'
+        ? (a, b) => a.name.localeCompare(b.name)
+        : (a, b) => b.total - a.total || a.name.localeCompare(b.name));
 
     let grandDS = 0, grandRS = 0;
     const body = sorted.map((row, i) => {
@@ -2332,7 +2348,9 @@ function generateCliPDF() {
     const sorted = [...counts.entries()]
       .map(([name, c]) => ({ name, count: c[key] }))
       .filter(r => r.count > 0)
-      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+      .sort(sortMode === 'name'
+        ? (a, b) => a.name.localeCompare(b.name)
+        : (a, b) => b.count - a.count || a.name.localeCompare(b.name));
 
     let grand = 0;
     const body = sorted.map((row, i) => {
