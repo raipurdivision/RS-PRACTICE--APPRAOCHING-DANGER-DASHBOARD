@@ -18,6 +18,7 @@
 
 
 
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1412,9 +1413,20 @@
         <button class="role-chip" id="covTabUncovered" onclick="setCoverageTab('uncovered')">❌ Uncovered (<span id="covCountUncovered">0</span>)</button>
         <span class="role-chip" style="cursor:default;border-color:var(--amber);color:var(--amber);font-weight:700;" id="coverageModalTotalCount">TOTAL COUNT: 0</span>
         <input type="text" class="hq-search" id="coverageSearch" placeholder="🔍  Search name / ID / HQ…" oninput="renderCoverageModal()" style="flex:1;min-width:160px;">
-        <select class="styled-select" id="coverageHqFilter" onchange="renderCoverageModal()" style="min-width:150px;">
-          <option value="">All HQ / Lobby</option>
-        </select>
+        <div class="hq-multiselect" id="coverageHqMultiSelect">
+          <button type="button" class="hq-dropdown-btn" id="coverageHqDropdownBtn" onclick="toggleCoverageHqDropdown(event)">
+            📍 HQ / Lobby <span id="coverageHqSelectedLabel">(All)</span> ▾
+          </button>
+          <div class="hq-dropdown-panel" id="coverageHqDropdownPanel" style="display:none;">
+            <label class="hq-dropdown-item">
+              <input type="checkbox" id="coverageHqAllChk" checked onchange="toggleCoverageHqAll(this)"> All HQ / Lobby
+            </label>
+            <div class="hq-dropdown-divider"></div>
+            <div id="coverageHqOptionsList">
+              <div class="hq-dropdown-empty">No HQ / Lobby found</div>
+            </div>
+          </div>
+        </div>
       </div>
       <div style="display:flex;gap:8px;padding:10px 16px 0;flex-wrap:wrap;">
         <button class="hq-pdf-btn" onclick="generateCoveragePDF()">📄 Generate PDF</button>
@@ -4604,6 +4616,7 @@ function closePendingModal() {
 // are treated as the same ID.
 // ═══════════════════════════════════════════════════════════════════════
 let coverageResult = { covered: [], uncovered: [] };
+let coverageHqFilter = new Set();   // empty set = All HQ / Lobby
 let coverageTab  = 'covered';
 let coverageType = null;   // 'rs' | 'ds'
 let coverageTimesSort = null;   // null | 'asc' | 'desc'
@@ -4698,6 +4711,7 @@ async function loadCoverage(type) {
   document.getElementById('covTabCovered').className   = 'role-chip active-alp';
   document.getElementById('covTabUncovered').className = 'role-chip';
   document.getElementById('coverageSearch').value = '';
+  coverageHqFilter.clear();
   populateCoverageHqFilter();
 
   document.getElementById('coverageTypeChooser').style.display = 'none';
@@ -4707,16 +4721,73 @@ async function loadCoverage(type) {
 }
 
 function populateCoverageHqFilter() {
-  const sel = document.getElementById('coverageHqFilter');
-  const prev = sel.value;
   const hqs = new Set();
   [...coverageResult.covered, ...coverageResult.uncovered].forEach(c => {
     if (c.hq) hqs.add(c.hq);
   });
   const sorted = [...hqs].sort((a, b) => a.localeCompare(b));
-  sel.innerHTML = '<option value="">All HQ / Lobby</option>' +
-    sorted.map(hq => `<option value="${esc(hq)}">${esc(hq)}</option>`).join('');
-  if (sorted.includes(prev)) sel.value = prev;
+
+  // Keep only selections still valid for this report's HQ list.
+  coverageHqFilter = new Set([...coverageHqFilter].filter(hq => sorted.includes(hq)));
+
+  const list = document.getElementById('coverageHqOptionsList');
+  list.innerHTML = sorted.length
+    ? sorted.map(hq => {
+        const checked = coverageHqFilter.has(hq) ? 'checked' : '';
+        return `<label class="hq-dropdown-item">
+          <input type="checkbox" class="coverageHqChk" value="${esc(hq)}" ${checked} onchange="onCoverageHqCheckboxChange()"> ${esc(hq)}
+        </label>`;
+      }).join('')
+    : '<div class="hq-dropdown-empty">No HQ / Lobby found</div>';
+
+  document.getElementById('coverageHqAllChk').checked = coverageHqFilter.size === 0;
+  updateCoverageHqLabel();
+}
+
+function toggleCoverageHqDropdown(e) {
+  if (e) e.stopPropagation();
+  const panel = document.getElementById('coverageHqDropdownPanel');
+  if (!panel) return;
+  panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
+}
+
+document.addEventListener('click', function(e) {
+  const ms = document.getElementById('coverageHqMultiSelect');
+  const panel = document.getElementById('coverageHqDropdownPanel');
+  if (ms && panel && !ms.contains(e.target)) panel.style.display = 'none';
+});
+
+function toggleCoverageHqAll(chk) {
+  document.querySelectorAll('.coverageHqChk').forEach(b => b.checked = false);
+  coverageHqFilter.clear();
+  chk.checked = true;
+  updateCoverageHqLabel();
+  renderCoverageModal();
+}
+
+function onCoverageHqCheckboxChange() {
+  const boxes = [...document.querySelectorAll('.coverageHqChk')];
+  const checked = boxes.filter(b => b.checked).map(b => b.value);
+  coverageHqFilter = new Set(checked);
+  document.getElementById('coverageHqAllChk').checked = checked.length === 0;
+  updateCoverageHqLabel();
+  renderCoverageModal();
+}
+
+function updateCoverageHqLabel() {
+  const label = document.getElementById('coverageHqSelectedLabel');
+  const btn   = document.getElementById('coverageHqDropdownBtn');
+  if (!label) return;
+  if (coverageHqFilter.size === 0) {
+    label.textContent = '(All)';
+    if (btn) btn.classList.remove('has-selection');
+  } else if (coverageHqFilter.size === 1) {
+    label.textContent = '(' + [...coverageHqFilter][0] + ')';
+    if (btn) btn.classList.add('has-selection');
+  } else {
+    label.textContent = '(' + coverageHqFilter.size + ' selected)';
+    if (btn) btn.classList.add('has-selection');
+  }
 }
 
 function setCoverageTab(tab) {
@@ -4762,11 +4833,10 @@ function updateRsRemark(key, value) {
 }
 
 function coverageFilteredList() {
-  const q  = (document.getElementById('coverageSearch').value || '').toLowerCase().trim();
-  const hq = (document.getElementById('coverageHqFilter').value || '').trim();
+  const q = (document.getElementById('coverageSearch').value || '').toLowerCase().trim();
   const list = (coverageTab === 'covered' ? coverageResult.covered : coverageResult.uncovered)
     .filter(c => !q || c.name.toLowerCase().includes(q) || (c.cmsid || '').toLowerCase().includes(q) || (c.hq || '').toLowerCase().includes(q))
-    .filter(c => !hq || c.hq === hq);
+    .filter(c => coverageHqFilter.size === 0 || coverageHqFilter.has(c.hq));
 
   if (coverageTimesSort === 'desc') {
     list.sort((a, b) => (b.occ || 0) - (a.occ || 0) || a.name.localeCompare(b.name));
@@ -4855,7 +4925,7 @@ function generateCoveragePDF() {
   y += 10;
 
   const filtered = coverageFilteredList();
-  const hqVal = (document.getElementById('coverageHqFilter').value || '').trim();
+  const hqVal = [...coverageHqFilter].join(', ');
   const qVal  = (document.getElementById('coverageSearch').value || '').trim();
   if (hqVal || qVal) {
     doc.setFont('helvetica', 'italic');
