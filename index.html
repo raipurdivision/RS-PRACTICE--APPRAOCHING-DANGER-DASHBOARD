@@ -1622,11 +1622,18 @@ function buildCliDropdown() {
 }
 
 // ── Filter rows by selected name (checks all name columns) ──
-function filterRows(rows, cols, nameCols, selectedName) {
-  if (!selectedName) return rows;
-  return rows.filter(row =>
-    nameCols.some(col => col && cols.includes(col) && (row[col]||'').trim() === selectedName)
-  );
+// nameCols/selectedName: strict-equality name match (existing behaviour).
+// idCols/selectedId (optional): a row also counts as a match if any of these
+// ID columns equals selectedId (normalized) — used to widen a name-based
+// search when the same person appears under varying name spellings but a
+// constant ID.
+function filterRows(rows, cols, nameCols, selectedName, idCols, selectedId) {
+  if (!selectedName && !selectedId) return rows;
+  return rows.filter(row => {
+    const nameMatch = !!selectedName && nameCols.some(col => col && cols.includes(col) && (row[col]||'').trim() === selectedName);
+    const idMatch = !!selectedId && (idCols||[]).some(col => col && cols.includes(col) && normId(row[col]) === selectedId);
+    return nameMatch || idMatch;
+  });
 }
 
 // ── Format a cell value for display ──
@@ -1704,6 +1711,14 @@ function renderTable(targetId, data, highlightCols, highlightVal) {
 function applyFilters() {
   const sheetVal  = document.getElementById('sheetSelector').value;
   const personVal = document.getElementById('lpFilter').value;
+  // Look up the selected person's roster CMS ID (if any). Row-matching below
+  // widens from strict name-equality to ALSO include rows whose ID column
+  // matches this ID — the same person can appear under slightly different
+  // name spellings across data-sheet rows while their ID stays constant, so
+  // this keeps the "records for this person" view consistent with the ID
+  // Coverage report's ID-based counting.
+  const personCrew = personVal ? (hqAllCrew || []).find(c => c.name === personVal) : null;
+  const personId   = personCrew && personCrew.cmsid ? normId(personCrew.cmsid) : null;
   const cliVal    = document.getElementById('cliFilter').value;
   const fromVal   = document.getElementById('fromDate').value;  // "YYYY-MM-DD" or ""
   const toVal     = document.getElementById('toDate').value;
@@ -1828,11 +1843,13 @@ function applyFilters() {
     banner.classList.remove('show');
   }
 
-  // Filter & render DS — search crew name AND cli name columns
+  // Filter & render DS — search crew name AND cli name columns (also widen
+  // by ID when the person came from an ID search, see activeSearchId above)
   let dsFiltered = { cols: [], rows: [] };
   if (cache.ds) {
     const dsCols = [RESOLVED.ds.crew, RESOLVED.ds.cli].filter(Boolean);
-    let filteredRows = filterRows(cache.ds.rows, cache.ds.cols, dsCols, personVal);
+    const dsIdCols = [RESOLVED.ds.id].filter(Boolean);
+    let filteredRows = filterRows(cache.ds.rows, cache.ds.cols, dsCols, personVal, dsIdCols, personId);
     if (cliVal && RESOLVED.ds.cli) filteredRows = filterRows(filteredRows, cache.ds.cols, [RESOLVED.ds.cli], cliVal);
     filteredRows = filterByDate(filteredRows, cache.ds.cols, findDateCol(cache.ds.cols));
     dsFiltered = { cols: cache.ds.cols, rows: filteredRows };
@@ -1840,11 +1857,13 @@ function applyFilters() {
     renderTable('dsTableWrap', dsFiltered, hlCols, personVal || cliVal);
   }
 
-  // Filter & render RS — search lp name, alp name, cli name columns
+  // Filter & render RS — search lp name, alp name, cli name columns (also
+  // widen by ID when the person came from an ID search)
   let rsFiltered = { cols: [], rows: [] };
   if (cache.rs) {
     const rsCols = [RESOLVED.rs.lp, RESOLVED.rs.alp, RESOLVED.rs.cli].filter(Boolean);
-    let filteredRows = filterRows(cache.rs.rows, cache.rs.cols, rsCols, personVal);
+    const rsIdCols = [RESOLVED.rs.alpId, RESOLVED.rs.lpId, RESOLVED.rs.genId].filter(Boolean);
+    let filteredRows = filterRows(cache.rs.rows, cache.rs.cols, rsCols, personVal, rsIdCols, personId);
     if (cliVal && RESOLVED.rs.cli) filteredRows = filterRows(filteredRows, cache.rs.cols, [RESOLVED.rs.cli], cliVal);
     filteredRows = filterByDate(filteredRows, cache.rs.cols, findDateCol(cache.rs.cols));
     rsFiltered = { cols: cache.rs.cols, rows: filteredRows };
