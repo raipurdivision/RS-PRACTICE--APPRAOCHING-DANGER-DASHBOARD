@@ -19,6 +19,7 @@
 
 
 
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -926,6 +927,46 @@
 
       <div class="divider"></div>
 
+      <!-- LP HQ multi-select filter (RS Practice rows) -->
+      <div class="filter-group">
+        <label>LP HQ :</label>
+        <div class="hq-multiselect" id="dashLpHqMultiSelect">
+          <button type="button" class="hq-dropdown-btn" id="dashLpHqDropdownBtn" onclick="toggleDashHqDropdown(event,'lp')">
+            📍 <span id="dashLpHqSelectedLabel">(All)</span> ▾
+          </button>
+          <div class="hq-dropdown-panel" id="dashLpHqDropdownPanel" style="display:none;">
+            <label class="hq-dropdown-item">
+              <input type="checkbox" id="dashLpHqAllChk" checked onchange="toggleDashHqAll('lp', this)"> All LP HQ
+            </label>
+            <div class="hq-dropdown-divider"></div>
+            <div id="dashLpHqOptionsList">
+              <div class="hq-dropdown-empty">Loading HQ list…</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ALP HQ multi-select filter (RS Practice rows) -->
+      <div class="filter-group">
+        <label>ALP HQ :</label>
+        <div class="hq-multiselect" id="dashAlpHqMultiSelect">
+          <button type="button" class="hq-dropdown-btn" id="dashAlpHqDropdownBtn" onclick="toggleDashHqDropdown(event,'alp')">
+            📍 <span id="dashAlpHqSelectedLabel">(All)</span> ▾
+          </button>
+          <div class="hq-dropdown-panel" id="dashAlpHqDropdownPanel" style="display:none;">
+            <label class="hq-dropdown-item">
+              <input type="checkbox" id="dashAlpHqAllChk" checked onchange="toggleDashHqAll('alp', this)"> All ALP HQ
+            </label>
+            <div class="hq-dropdown-divider"></div>
+            <div id="dashAlpHqOptionsList">
+              <div class="hq-dropdown-empty">Loading HQ list…</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
       <!-- Search by LP/ALP ID -->
       <div class="filter-group">
         <label>Search by ID :</label>
@@ -943,6 +984,7 @@
       <button class="refresh-btn" onclick="loadAll()">⟳ Refresh</button>
       <button class="refresh-btn" id="debugBtn" onclick="showDebug()" style="border-color:#ff9800;color:#ff9800;font-size:11px;">🔍 Debug Timestamps</button>
       <button class="refresh-btn" id="pdfBtn" onclick="generatePDFReport()" style="border-color:var(--signal-green);color:var(--signal-green);">📄 Generate PDF Report</button>
+      <button class="refresh-btn" id="excelBtn" onclick="downloadDashboardExcel()" style="border-color:#2ecc71;color:#2ecc71;">📊 Download Excel</button>
 
       <span style="font-size:12px;color:var(--muted);font-family:'Courier New',monospace;margin-left:auto;">
         <span class="status-dot wait" id="statusDot"></span>
@@ -1866,6 +1908,13 @@ function applyFilters() {
     let filteredRows = filterRows(cache.rs.rows, cache.rs.cols, rsCols, personVal, rsIdCols, personId);
     if (cliVal && RESOLVED.rs.cli) filteredRows = filterRows(filteredRows, cache.rs.cols, [RESOLVED.rs.cli], cliVal);
     filteredRows = filterByDate(filteredRows, cache.rs.cols, findDateCol(cache.rs.cols));
+    // LP HQ / ALP HQ multi-select filters (Dashboard tab)
+    if (dashLpHqFilter.size && RESOLVED.rs.lpHq) {
+      filteredRows = filteredRows.filter(row => dashLpHqFilter.has((row[RESOLVED.rs.lpHq] || '').trim().toUpperCase()));
+    }
+    if (dashAlpHqFilter.size && RESOLVED.rs.alpHq) {
+      filteredRows = filteredRows.filter(row => dashAlpHqFilter.has((row[RESOLVED.rs.alpHq] || '').trim().toUpperCase()));
+    }
     rsFiltered = { cols: cache.rs.cols, rows: filteredRows };
     const hlCols = [...rsCols, ...(cliVal && RESOLVED.rs.cli ? [RESOLVED.rs.cli] : [])];
     renderTable('rsTableWrap', rsFiltered, hlCols, personVal || cliVal);
@@ -1894,7 +1943,7 @@ function applyFilters() {
   }
 
   // Save current filtered state for PDF export
-  window.lastFiltered = { ds: dsFiltered, rs: rsFiltered, personVal, cliVal, fromVal, toVal, dsLen, rsLen };
+  window.lastFiltered = { ds: dsFiltered, rs: rsFiltered, personVal, cliVal, fromVal, toVal, dsLen, rsLen, sheetVal, showDS, showRS };
 }
 
 function clearFilters() {
@@ -1905,7 +1954,119 @@ function clearFilters() {
   document.getElementById('toDate').value = '';
   document.getElementById('idSearchInput').value = '';
   document.getElementById('idSearchStatus').textContent = '';
+  dashLpHqFilter.clear();
+  dashAlpHqFilter.clear();
+  document.querySelectorAll('.dashLpHqChk').forEach(b => b.checked = false);
+  document.querySelectorAll('.dashAlpHqChk').forEach(b => b.checked = false);
+  const dashLpAllChk = document.getElementById('dashLpHqAllChk');
+  if (dashLpAllChk) dashLpAllChk.checked = true;
+  const dashAlpAllChk = document.getElementById('dashAlpHqAllChk');
+  if (dashAlpAllChk) dashAlpAllChk.checked = true;
+  updateDashHqLabel('lp');
+  updateDashHqLabel('alp');
   applyFilters();
+}
+
+// ── LP HQ / ALP HQ multi-select filters (Dashboard tab, filter RS Practice rows) ──
+let dashLpHqFilter  = new Set();  // empty set = All LP HQ
+let dashAlpHqFilter = new Set();  // empty set = All ALP HQ
+
+function populateDashHqOptions() {
+  const lpList  = document.getElementById('dashLpHqOptionsList');
+  const alpList = document.getElementById('dashAlpHqOptionsList');
+  if (!lpList || !alpList) return;
+
+  const lpSet  = new Set();
+  const alpSet = new Set();
+
+  if (cache.rs) {
+    const c = RESOLVED.rs;
+    if (c.lpHq) cache.rs.rows.forEach(row => {
+      const h = (row[c.lpHq] || '').trim().toUpperCase();
+      if (h) lpSet.add(h);
+    });
+    if (c.alpHq) cache.rs.rows.forEach(row => {
+      const h = (row[c.alpHq] || '').trim().toUpperCase();
+      if (h) alpSet.add(h);
+    });
+  }
+
+  const lpHqs  = [...lpSet].sort();
+  const alpHqs = [...alpSet].sort();
+
+  lpList.innerHTML = lpHqs.length ? lpHqs.map(hq => {
+    const checked = dashLpHqFilter.has(hq) ? 'checked' : '';
+    return `<label class="hq-dropdown-item">
+      <input type="checkbox" class="dashLpHqChk" value="${esc(hq)}" ${checked} onchange="onDashHqCheckboxChange('lp')"> ${esc(hq)}
+    </label>`;
+  }).join('') : '<div class="hq-dropdown-empty">No LP HQ data.</div>';
+
+  alpList.innerHTML = alpHqs.length ? alpHqs.map(hq => {
+    const checked = dashAlpHqFilter.has(hq) ? 'checked' : '';
+    return `<label class="hq-dropdown-item">
+      <input type="checkbox" class="dashAlpHqChk" value="${esc(hq)}" ${checked} onchange="onDashHqCheckboxChange('alp')"> ${esc(hq)}
+    </label>`;
+  }).join('') : '<div class="hq-dropdown-empty">No ALP HQ data.</div>';
+
+  document.getElementById('dashLpHqAllChk').checked  = dashLpHqFilter.size === 0;
+  document.getElementById('dashAlpHqAllChk').checked = dashAlpHqFilter.size === 0;
+}
+
+function toggleDashHqDropdown(e, which) {
+  if (e) e.stopPropagation();
+  const panel = document.getElementById(which === 'lp' ? 'dashLpHqDropdownPanel' : 'dashAlpHqDropdownPanel');
+  if (!panel) return;
+  panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
+}
+
+document.addEventListener('click', function(e) {
+  const lpMs   = document.getElementById('dashLpHqMultiSelect');
+  const lpPan  = document.getElementById('dashLpHqDropdownPanel');
+  if (lpMs && lpPan && !lpMs.contains(e.target)) lpPan.style.display = 'none';
+  const alpMs  = document.getElementById('dashAlpHqMultiSelect');
+  const alpPan = document.getElementById('dashAlpHqDropdownPanel');
+  if (alpMs && alpPan && !alpMs.contains(e.target)) alpPan.style.display = 'none';
+});
+
+function toggleDashHqAll(which, chk) {
+  const cls = which === 'lp' ? 'dashLpHqChk' : 'dashAlpHqChk';
+  document.querySelectorAll('.' + cls).forEach(b => b.checked = false);
+  if (which === 'lp') dashLpHqFilter.clear(); else dashAlpHqFilter.clear();
+  chk.checked = true;
+  updateDashHqLabel(which);
+  applyFilters();
+}
+
+function onDashHqCheckboxChange(which) {
+  const cls = which === 'lp' ? 'dashLpHqChk' : 'dashAlpHqChk';
+  const boxes = [...document.querySelectorAll('.' + cls)];
+  const checked = boxes.filter(b => b.checked).map(b => b.value);
+  if (which === 'lp') {
+    dashLpHqFilter = new Set(checked);
+    document.getElementById('dashLpHqAllChk').checked = checked.length === 0;
+  } else {
+    dashAlpHqFilter = new Set(checked);
+    document.getElementById('dashAlpHqAllChk').checked = checked.length === 0;
+  }
+  updateDashHqLabel(which);
+  applyFilters();
+}
+
+function updateDashHqLabel(which) {
+  const filter = which === 'lp' ? dashLpHqFilter : dashAlpHqFilter;
+  const label  = document.getElementById(which === 'lp' ? 'dashLpHqSelectedLabel' : 'dashAlpHqSelectedLabel');
+  const btn    = document.getElementById(which === 'lp' ? 'dashLpHqDropdownBtn' : 'dashAlpHqDropdownBtn');
+  if (!label) return;
+  if (filter.size === 0) {
+    label.textContent = '(All)';
+    if (btn) btn.classList.remove('has-selection');
+  } else if (filter.size === 1) {
+    label.textContent = '(' + [...filter][0] + ')';
+    if (btn) btn.classList.add('has-selection');
+  } else {
+    label.textContent = '(' + filter.size + ' selected)';
+    if (btn) btn.classList.add('has-selection');
+  }
 }
 
 // ── Search dashboard by LP/ALP ID (CMS ID from crew roster) ──
@@ -1952,7 +2113,12 @@ async function searchById() {
   applyFilters();
 }
 
-// ── Generate downloadable PDF report (current filters + both sheet counts) ──
+// ── Strip any "remarks"-style column from a column list ──
+function stripRemarksCols(cols) {
+  return (cols || []).filter(c => !/remark/i.test(String(c || '')));
+}
+
+// ── Generate downloadable PDF report (current filters + selected sheet(s)) ──
 function generatePDFReport() {
   if (!window.jspdf || !window.jspdf.jsPDF) {
     alert('PDF library failed to load. Please check your internet connection and try again.');
@@ -1961,25 +2127,29 @@ function generatePDFReport() {
   const f = window.lastFiltered;
   if (!f) { alert('No data loaded yet. Please wait for the dashboard to load, then try again.'); return; }
 
+  // Respect the "View Sheet" selector: only include the sheet(s) currently selected.
+  const showDS = f.showDS !== undefined ? f.showDS : true;
+  const showRS = f.showRS !== undefined ? f.showRS : true;
+
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
   doc.setTextColor(0, 0, 0);
 
   const pageWidth = doc.internal.pageSize.getWidth();
-  let y = 32;
+  let y = 24;
 
   // Title
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(13);
+  doc.setFontSize(11.5);
   doc.text('RAIPUR DIVISION · CREW SAFETY COUNSELLING REPORT', pageWidth / 2, y, { align: 'center' });
-  y += 14;
+  y += 12;
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8.5);
+  doc.setFontSize(7.5);
   doc.text('Generated: ' + new Date().toLocaleString('en-IN'), pageWidth / 2, y, { align: 'center' });
-  y += 16;
+  y += 13;
 
   // Filter context
-  doc.setFontSize(8.5);
+  doc.setFontSize(7.5);
   const filterLines = [];
   if (f.cliVal)    filterLines.push('CLI Name: ' + f.cliVal);
   if (f.personVal) filterLines.push('Crew Name: ' + f.personVal);
@@ -1987,76 +2157,125 @@ function generatePDFReport() {
   if (f.toVal)     filterLines.push('To: '   + f.toVal.split('-').reverse().join('/'));
   if (filterLines.length) {
     doc.setFont('helvetica', 'bold');
-    doc.text(filterLines.join('   |   '), 28, y);
-    y += 14;
+    doc.text(filterLines.join('   |   '), 20, y);
+    y += 12;
   }
 
-  // Total counts summary
-  const totalBoth = f.dsLen + f.rsLen;
+  // Total counts summary (only for the sheet(s) actually included)
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9.5);
-  doc.text(
-    'Total Danger Signal Counsellings: ' + f.dsLen +
-    '    |    Total RS Practice Sessions: ' + f.rsLen +
-    '    |    Total (Both Sheets): ' + totalBoth,
-    28, y
-  );
-  y += 16;
+  doc.setFontSize(8.5);
+  const summaryParts = [];
+  if (showDS) summaryParts.push('Total Danger Signal Counsellings: ' + f.dsLen);
+  if (showRS) summaryParts.push('Total RS Practice Sessions: ' + f.rsLen);
+  if (showDS && showRS) summaryParts.push('Total (Both Sheets): ' + (f.dsLen + f.rsLen));
+  doc.text(summaryParts.join('    |    '), 20, y);
+  y += 14;
+
+  const tableOpts = {
+    styles: { fontSize: 6, cellPadding: 1.5, textColor: [0, 0, 0] },
+    headStyles: { fillColor: [225, 225, 225], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 6 },
+    margin: { left: 20, right: 20 },
+    theme: 'grid'
+  };
 
   // DS Table
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10.5);
-  doc.text('APPROACHING DANGER COUNSELLING (' + f.dsLen + ' records)', 28, y);
-  y += 6;
+  if (showDS) {
+    const dsCols = stripRemarksCols(f.ds.cols);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9.5);
+    doc.text('APPROACHING DANGER COUNSELLING (' + f.dsLen + ' records)', 20, y);
+    y += 5;
 
-  if (f.ds.rows.length) {
-    doc.autoTable({
-      startY: y,
-      head: [f.ds.cols],
-      body: f.ds.rows.map(row => f.ds.cols.map(c => formatCellValue(c, row[c] !== undefined ? row[c] : ''))),
-      styles: { fontSize: 6.5, cellPadding: 2, textColor: [0, 0, 0] },
-      headStyles: { fillColor: [225, 225, 225], textColor: [0, 0, 0], fontStyle: 'bold' },
-      margin: { left: 28, right: 28 },
-      theme: 'grid'
-    });
-    y = doc.lastAutoTable.finalY + 18;
-  } else {
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.text('No records.', 28, y + 12);
-    y += 24;
+    if (f.ds.rows.length) {
+      doc.autoTable(Object.assign({}, tableOpts, {
+        startY: y,
+        head: [dsCols],
+        body: f.ds.rows.map(row => dsCols.map(c => formatCellValue(c, row[c] !== undefined ? row[c] : '')))
+      }));
+      y = doc.lastAutoTable.finalY + 14;
+    } else {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.text('No records.', 20, y + 10);
+      y += 20;
+    }
   }
 
   // Page break before RS table if needed
-  if (y > doc.internal.pageSize.getHeight() - 100) {
+  if (showDS && showRS && y > doc.internal.pageSize.getHeight() - 90) {
     doc.addPage();
-    y = 32;
+    y = 24;
   }
 
   // RS Table
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10.5);
-  doc.text('RS PRACTICE (' + f.rsLen + ' records)', 28, y);
-  y += 6;
+  if (showRS) {
+    const rsCols = stripRemarksCols(f.rs.cols);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9.5);
+    doc.text('RS PRACTICE (' + f.rsLen + ' records)', 20, y);
+    y += 5;
 
-  if (f.rs.rows.length) {
-    doc.autoTable({
-      startY: y,
-      head: [f.rs.cols],
-      body: f.rs.rows.map(row => f.rs.cols.map(c => formatCellValue(c, row[c] !== undefined ? row[c] : ''))),
-      styles: { fontSize: 6.5, cellPadding: 2, textColor: [0, 0, 0] },
-      headStyles: { fillColor: [225, 225, 225], textColor: [0, 0, 0], fontStyle: 'bold' },
-      margin: { left: 28, right: 28 },
-      theme: 'grid'
-    });
-  } else {
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.text('No records.', 28, y + 12);
+    if (f.rs.rows.length) {
+      doc.autoTable(Object.assign({}, tableOpts, {
+        startY: y,
+        head: [rsCols],
+        body: f.rs.rows.map(row => rsCols.map(c => formatCellValue(c, row[c] !== undefined ? row[c] : '')))
+      }));
+    } else {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.text('No records.', 20, y + 10);
+    }
   }
 
+  const sheetPart = f.sheetVal === 'ds' ? 'DS' : (f.sheetVal === 'rs' ? 'RS' : 'Both');
   const fnamePart = f.cliVal ? f.cliVal.replace(/[^a-z0-9]+/gi, '_') : 'all';
-  doc.save('Counselling_Report_' + fnamePart + '_' + new Date().toISOString().slice(0,10) + '.pdf');
+  doc.save('Counselling_Report_' + sheetPart + '_' + fnamePart + '_' + new Date().toISOString().slice(0,10) + '.pdf');
+}
+
+// ── Download current Dashboard filtered view as an Excel workbook ──
+// Respects the same "View Sheet" selection as the PDF export (only the
+// sheet(s) currently selected are included), and strips remarks columns.
+function downloadDashboardExcel() {
+  if (!window.XLSX) {
+    alert('Excel library failed to load. Please check your internet connection and try again.');
+    return;
+  }
+  const f = window.lastFiltered;
+  if (!f) { alert('No data loaded yet. Please wait for the dashboard to load, then try again.'); return; }
+
+  const showDS = f.showDS !== undefined ? f.showDS : true;
+  const showRS = f.showRS !== undefined ? f.showRS : true;
+
+  const wb = XLSX.utils.book_new();
+
+  if (showDS && f.ds.rows.length) {
+    const dsCols = stripRemarksCols(f.ds.cols);
+    const dsRows = f.ds.rows.map(row => {
+      const obj = {};
+      dsCols.forEach(c => { obj[c] = formatCellValue(c, row[c] !== undefined ? row[c] : ''); });
+      return obj;
+    });
+    const wsDs = XLSX.utils.json_to_sheet(dsRows, { header: dsCols });
+    XLSX.utils.book_append_sheet(wb, wsDs, 'Danger Signal Counselling');
+  }
+
+  if (showRS && f.rs.rows.length) {
+    const rsCols = stripRemarksCols(f.rs.cols);
+    const rsRows = f.rs.rows.map(row => {
+      const obj = {};
+      rsCols.forEach(c => { obj[c] = formatCellValue(c, row[c] !== undefined ? row[c] : ''); });
+      return obj;
+    });
+    const wsRs = XLSX.utils.json_to_sheet(rsRows, { header: rsCols });
+    XLSX.utils.book_append_sheet(wb, wsRs, 'RS Practice');
+  }
+
+  if (!wb.SheetNames.length) { alert('No records to export for the current filters.'); return; }
+
+  const sheetPart = f.sheetVal === 'ds' ? 'DS' : (f.sheetVal === 'rs' ? 'RS' : 'Both');
+  const fnamePart = f.cliVal ? f.cliVal.replace(/[^a-z0-9]+/gi, '_') : 'all';
+  XLSX.writeFile(wb, 'Counselling_Report_' + sheetPart + '_' + fnamePart + '_' + new Date().toISOString().slice(0,10) + '.xlsx');
 }
 
 // ── Debug: show raw timestamp values ──
@@ -2165,6 +2384,7 @@ async function loadAll() {
   resolveColumns();
   buildNameDropdown();
   buildCliDropdown();
+  populateDashHqOptions();
   applyFilters();
   // Kick off HQ roster fetch in the background (source of LP/ALP IDs for search) —
   // don't block dashboard rendering on it.
