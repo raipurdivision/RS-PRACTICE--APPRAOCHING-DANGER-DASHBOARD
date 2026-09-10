@@ -1277,7 +1277,10 @@
     <!-- ── RS Practice Done — HQ Wise Pie Chart + Breakup Table ── -->
     <div class="hq-section-title" style="margin-top:22px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
       <h3 style="color:var(--signal-green);margin:0;">🥧 RS PRACTICE DONE — HQ WISE BREAKUP</h3>
-      <button class="hq-pdf-btn" onclick="generateRsBreakupPDF()">📄 Generate PDF</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="hq-pdf-btn" onclick="generateRsBreakupPDF()">📄 Generate PDF</button>
+        <button class="hq-pdf-btn" style="background:#1a3a2a;border-color:#2ecc71;color:#2ecc71;" onclick="generateHqWiseReportPDF()">📋 Generate HQ Wise Report</button>
+      </div>
     </div>
     <div class="rs-pie-wrap">
       <div class="rs-pie-chart-box">
@@ -1355,7 +1358,10 @@
     <!-- ── Approaching Danger Counselling Done — HQ Wise Pie Chart + Breakup Table ── -->
     <div class="hq-section-title" style="margin-top:22px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
       <h3 style="color:var(--signal-red);margin:0;">🥧 APPROACHING DANGER COUNSELLING DONE — HQ WISE BREAKUP</h3>
-      <button class="hq-pdf-btn" onclick="generateDsBreakupPDF()">📄 Generate PDF</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="hq-pdf-btn" onclick="generateDsBreakupPDF()">📄 Generate PDF</button>
+        <button class="hq-pdf-btn" style="background:#1a3a2a;border-color:#2ecc71;color:#2ecc71;" onclick="generateDsHqWiseReportPDF()">📋 Generate HQ Wise Report</button>
+      </div>
     </div>
     <div class="rs-pie-wrap">
       <div class="rs-pie-chart-box">
@@ -1897,6 +1903,37 @@ function applyFilters() {
     dsFiltered = { cols: cache.ds.cols, rows: filteredRows };
     const hlCols = [...dsCols, ...(cliVal && RESOLVED.ds.cli ? [RESOLVED.ds.cli] : [])];
     renderTable('dsTableWrap', dsFiltered, hlCols, personVal || cliVal);
+
+    // ── HQ Wise Report stats — computed straight from the Approaching Danger
+    // Counselling sheet's own HQ column + ID column (NOT the roster), on the
+    // currently filtered rows, so "Division" / "Outstation" / "Unique Crew
+    // Covered" always match exactly what's on screen. Same logic as RS Practice. ──
+    const DS_DIVISION_HQS = ['DBEC', 'BYT', 'DURG', 'R', 'DRZ'];
+    const dsHqCol = RESOLVED.ds.hq;
+    const dsIdColsForStats = [RESOLVED.ds.id].filter(Boolean);
+    let dsDivisionRecords = 0, dsOutstationRecords = 0;
+    const dsOutstationHqSet = new Set();
+    const uniqueDsIds = new Set();
+    filteredRows.forEach(row => {
+      const hqVal = dsHqCol ? (row[dsHqCol] || '').trim().toUpperCase() : '';
+      if (hqVal && DS_DIVISION_HQS.includes(hqVal)) {
+        dsDivisionRecords++;
+      } else {
+        dsOutstationRecords++;
+        if (hqVal) dsOutstationHqSet.add(hqVal);
+      }
+      for (const col of dsIdColsForStats) {
+        const id = normId(row[col]);
+        if (id) { uniqueDsIds.add(id); break; }
+      }
+    });
+    window.dsHqWiseStats = {
+      totalRecords: filteredRows.length,
+      divisionRecords: dsDivisionRecords, outstationRecords: dsOutstationRecords,
+      outstationHqCount: dsOutstationHqSet.size,
+      uniqueCovered: uniqueDsIds.size,
+      divisionHqs: DS_DIVISION_HQS
+    };
   }
 
   // Filter & render RS — search lp name, alp name, cli name columns (also
@@ -1918,6 +1955,41 @@ function applyFilters() {
     rsFiltered = { cols: cache.rs.cols, rows: filteredRows };
     const hlCols = [...rsCols, ...(cliVal && RESOLVED.rs.cli ? [RESOLVED.rs.cli] : [])];
     renderTable('rsTableWrap', rsFiltered, hlCols, personVal || cliVal);
+
+    // ── HQ Wise Report stats — computed straight from the RS Practice sheet's
+    // own ALP HQ column + ALP ID column (NOT the roster), on the currently
+    // filtered rows, so "Division" / "Outstation" / "Unique ALP Covered"
+    // always match exactly what's on screen. ──
+    const DIVISION_HQS = ['DBEC', 'BYT', 'DURG', 'R', 'DRZ'];
+    const alpHqCol = RESOLVED.rs.alpHq || RESOLVED.rs.hq;
+    const idColsForStats = [RESOLVED.rs.alpId, RESOLVED.rs.genId].filter(Boolean);
+    let divisionRecords = 0, outstationRecords = 0;
+    const outstationHqSet = new Set();
+    const uniqueAlpIds = new Set();
+    filteredRows.forEach(row => {
+      const hqVal = alpHqCol ? (row[alpHqCol] || '').trim().toUpperCase() : '';
+      // Every RS Practice row counts as either Division or Outstation — a row
+      // with no ALP HQ value on it still falls under Outstation, so Division +
+      // Outstation always adds up to the true total record count (matching the
+      // dashboard's own RS record count exactly).
+      if (hqVal && DIVISION_HQS.includes(hqVal)) {
+        divisionRecords++;
+      } else {
+        outstationRecords++;
+        if (hqVal) outstationHqSet.add(hqVal);
+      }
+      for (const col of idColsForStats) {
+        const id = normId(row[col]);
+        if (id) { uniqueAlpIds.add(id); break; }
+      }
+    });
+    window.rsHqWiseStats = {
+      totalRecords: filteredRows.length,
+      divisionRecords, outstationRecords,
+      outstationHqCount: outstationHqSet.size,
+      uniqueAlpCovered: uniqueAlpIds.size,
+      divisionHqs: DIVISION_HQS
+    };
   }
 
   // Update counts to reflect filter
@@ -3306,6 +3378,7 @@ function buildHqSummaryTable(rosterData) {
   const dsDiag = { totalEntries: 0, matched: 0, unmatched: 0, idColFound: false, totalIdEntries: 0, idMatched: 0, idUnmatched: 0, noId: 0, orphanIds: {}, dupeNames: {} };
   const hqRepeat2Plus = {}; // { hq: count of ALP/SR-ALP crew who completed RS Practice 2+ times } — for the breakup table
   const isAlpFamily = d => d === 'ALP' || d === 'SR ALP';
+  const isLpFamily  = d => d === 'LP' || d === 'LPP' || d === 'LPM';
 
   function addCount(store, hq, desg, name) {
     if (!hq || !name) return;
@@ -3464,11 +3537,12 @@ function buildHqSummaryTable(rosterData) {
 
   let html = '';
   // Grand totals
-  let gTotal=0, gDS=0, gRS=0, gRsRaw=0, gBoth=0, gPending=0, gAlpFamily=0, gDsAlpFamily=0;
+  let gTotal=0, gDS=0, gRS=0, gRsRaw=0, gBoth=0, gPending=0, gAlpFamily=0, gDsAlpFamily=0, gDsLpFamily=0;
   const hqRsTotals  = {};   // { hq: rsDone } — used for the RS Practice pie chart / breakup table
   const hqAlpTotals = {};   // { hq: total ALP+SR ALP roster crew } — used for the same breakup table
   const hqDsTotals   = {};  // { hq: dsDone } — used for the DS Counselling pie chart / breakup table
   const hqCrewTotals = {};  // { hq: total roster crew, all designations } — used for the same breakup table
+  const hqRsRawTotals = {}; // { hq: total RS Practice records incl. repeats } — Division/Outstation record counts
 
   allHQs.forEach(hq => {
     const desgMap = hqDesgMap[hq];
@@ -3478,7 +3552,7 @@ function buildHqSummaryTable(rosterData) {
       ...Object.keys(desgMap).filter(d => !DESG_ORDER.includes(d)).sort()
     ];
 
-    let hqTotal=0, hqDS=0, hqRS=0, hqRsRaw=0, hqBoth=0, hqPending=0, hqAlpFamily=0, hqDsAlpFamily=0;
+    let hqTotal=0, hqDS=0, hqRS=0, hqRsRaw=0, hqRsRawAlpOnly=0, hqBoth=0, hqPending=0, hqAlpFamily=0, hqDsAlpFamily=0, hqDsLpFamily=0;
 
     // HQ group header
     html += `<tr class="hq-group-header">
@@ -3501,8 +3575,10 @@ function buildHqSummaryTable(rosterData) {
       hqTotal   += total;   hqDS   += dsDone;
       hqRS      += rsDone;  hqBoth += bothDone;
       hqPending += pending; hqRsRaw += rsRaw;
+      if (desg === 'ALP') hqRsRawAlpOnly += rsRaw;
       if (isAlpFamily(desg)) hqAlpFamily += total;
       if (isAlpFamily(desg)) hqDsAlpFamily += dsDone;
+      if (isLpFamily(desg))  hqDsLpFamily += dsDone;
 
       const pendingCrew = [...crewSet].filter(n => !dsSet.has(n) && !rsSet.has(n));
       const pendingCell = pending > 0
@@ -3527,10 +3603,12 @@ function buildHqSummaryTable(rosterData) {
     gTotal+=hqTotal; gDS+=hqDS; gRS+=hqRS; gRsRaw+=hqRsRaw; gBoth+=hqBoth; gPending+=hqPending;
     gAlpFamily += hqAlpFamily;
     gDsAlpFamily += hqDsAlpFamily;
+    gDsLpFamily += hqDsLpFamily;
     hqRsTotals[hq]  = hqRS;
     hqAlpTotals[hq] = hqAlpFamily;
     hqDsTotals[hq]   = hqDsAlpFamily;   // DS breakup pie/table = ALP only, same denominator as RS Practice
     hqCrewTotals[hq] = hqAlpFamily;
+    hqRsRawTotals[hq] = hqRsRawAlpOnly;
     const hqAllPendingCrew = hqDesgs.flatMap(d => {
       const cs = desgMap[d] || new Set();
       const ds2 = (dsNames[hq] && dsNames[hq][d]) ? dsNames[hq][d].names : new Set();
@@ -3611,16 +3689,19 @@ function buildHqSummaryTable(rosterData) {
 
   // ── STEP 8: RS Practice Done — HQ Wise pie chart + breakup table ──
   const gRepeat2Plus = Object.values(hqRepeat2Plus).reduce((s, n) => s + n, 0);
-  renderRsHqBreakup(hqRsTotals, gRS, hqAlpTotals, gAlpFamily, hqRepeat2Plus, gRepeat2Plus);
+  renderRsHqBreakup(hqRsTotals, gRS, hqAlpTotals, gAlpFamily, hqRepeat2Plus, gRepeat2Plus, hqRsRawTotals, gRsRaw);
 
   // ── STEP 9: Approaching Danger Counselling Done — HQ Wise pie chart + breakup table (ALP only, same as RS Practice) ──
   renderDsHqBreakup(hqDsTotals, gDsAlpFamily, hqCrewTotals, gAlpFamily);
+  // LP/ALP Counselled — unique-crew DS Counselling done, by designation family
+  // (LP+LPP+LPM vs ALP+SR ALP). Used by the DS HQ Wise Report's stat boxes.
+  window.dsDesgCounselled = { lpCounselled: gDsLpFamily, alpCounselled: gDsAlpFamily };
 }
 
 // ── RS Practice Done — HQ Wise pie chart + breakup table ──
 const RS_PIE_COLORS = ['#2bb673','#4d8fd6','#f0b429','#e0413f','#9b59b6','#00d4ff','#ff8c42','#8fd6c4','#c77dff','#ffe680','#6dd3ff','#f28fb0','#7fd858','#d68f4d','#5c9ded'];
 
-function renderRsHqBreakup(hqRsTotals, grandTotal, hqAlpTotals, grandAlpTotal, hqRepeat2Plus, grandRepeat2Plus) {
+function renderRsHqBreakup(hqRsTotals, grandTotal, hqAlpTotals, grandAlpTotal, hqRepeat2Plus, grandRepeat2Plus, hqRsRawTotals, grandRsRaw) {
   const svg    = document.getElementById('rsPieChart');
   const body   = document.getElementById('rsHqBreakupBody');
   const totalEl= document.getElementById('rsPieTotal');
@@ -3631,12 +3712,14 @@ function renderRsHqBreakup(hqRsTotals, grandTotal, hqAlpTotals, grandAlpTotal, h
   grandAlpTotal = grandAlpTotal || 0;
   hqRepeat2Plus = hqRepeat2Plus || {};
   grandRepeat2Plus = grandRepeat2Plus || 0;
+  hqRsRawTotals = hqRsRawTotals || {};
+  grandRsRaw = grandRsRaw || 0;
 
   // Every HQ that has ALP+SR ALP roster crew and/or an RS-done count, sorted
   // by Total ALP desc (falls back to RS Done desc when ALP totals aren't available).
   const hqSet = new Set([...Object.keys(hqRsTotals || {}), ...Object.keys(hqAlpTotals)]);
   const entries = [...hqSet]
-    .map(hq => [hq, (hqRsTotals && hqRsTotals[hq]) || 0, hqAlpTotals[hq] || 0, hqRepeat2Plus[hq] || 0])
+    .map(hq => [hq, (hqRsTotals && hqRsTotals[hq]) || 0, hqAlpTotals[hq] || 0, hqRepeat2Plus[hq] || 0, hqRsRawTotals[hq] || 0])
     .filter(([, rs, alp]) => rs > 0 || alp > 0)
     .sort((a, b) => b[2] - a[2] || b[1] - a[1]);
 
@@ -3845,13 +3928,13 @@ function buildDsDonutImage(rows, grandTotal, grandCrewTotal) {
 
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillStyle = '#e7edf3';
+  ctx.fillStyle = '#1a1f26';
   ctx.font = 'bold ' + Math.round(size * 0.135) + 'px Arial, sans-serif';
   ctx.fillText(String(grandTotal), cx, cy - size * 0.045);
-  ctx.fillStyle = '#f0a3a1';
+  ctx.fillStyle = '#c0392b';
   ctx.font = Math.round(size * 0.05) + 'px Arial, sans-serif';
   ctx.fillText('DS DONE', cx, cy + size * 0.06);
-  ctx.fillStyle = '#8694a3';
+  ctx.fillStyle = '#5a6472';
   ctx.font = Math.round(size * 0.04) + 'px Arial, sans-serif';
   ctx.fillText('of ' + grandCrewTotal + ' ALP', cx, cy + size * 0.115);
 
@@ -3867,20 +3950,20 @@ function generateDsBreakupPDF() {
     alert('No Approaching Danger Counselling breakup data loaded yet. Click ⟳ Refresh first.'); return;
   }
 
-  // ── Dashboard dark theme colors (matching the on-screen CSS) ──
-  const COL_BG        = [11, 15, 20];    // --bg
-  const COL_PANEL     = [17, 22, 29];    // --panel
-  const COL_LINE      = [35, 44, 56];    // --line
-  const COL_MUTED     = [134, 148, 163]; // --muted
-  const COL_TEXT      = [231, 237, 243]; // --text
-  const COL_CYAN      = [0, 212, 255];   // hq column / headers
-  const COL_RED       = [224, 65, 63];   // --signal-red
-  const COL_YELLOW    = [240, 180, 41];  // --signal-yellow
-  const COL_HEAD_BG   = [8, 21, 32];     // #081520
-  const COL_ROW_ALT   = [14, 19, 25];    // #0e1319
-  const COL_BADGE_HI  = { bg: [42, 40, 0],  text: [255, 230, 128] };
-  const COL_BADGE_MID = { bg: [42, 26, 6],  text: [240, 180, 41] };
-  const COL_BADGE_LO  = { bg: [42, 20, 20], text: [224, 65, 63] };
+  // ── White report theme colors ──
+  const COL_BG        = [255, 255, 255]; // page background
+  const COL_PANEL     = [255, 255, 255]; // table cell fill
+  const COL_LINE      = [214, 220, 228]; // borders
+  const COL_MUTED     = [110, 120, 132]; // muted gray
+  const COL_TEXT      = [30, 36, 44];    // body text
+  const COL_CYAN      = [0, 105, 148];   // hq column / headers (darkened for white bg)
+  const COL_RED       = [190, 40, 38];   // --signal-red (darkened)
+  const COL_YELLOW    = [170, 118, 0];   // --signal-yellow (darkened)
+  const COL_HEAD_BG   = [237, 241, 246]; // light header band
+  const COL_ROW_ALT   = [246, 248, 250]; // light alt row
+  const COL_BADGE_HI  = { bg: [223, 245, 224], text: [24, 120, 45] };
+  const COL_BADGE_MID = { bg: [255, 240, 205], text: [150, 100, 0] };
+  const COL_BADGE_LO  = { bg: [252, 224, 222], text: [176, 32, 30] };
 
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
@@ -3926,7 +4009,7 @@ function generateDsBreakupPDF() {
     columnStyles: {
       0: { textColor: COL_MUTED, cellWidth: 26 },
       1: { halign: 'left', textColor: COL_CYAN, fontStyle: 'bold' },
-      2: { textColor: [255, 255, 255], fontStyle: 'bold' },
+      2: { textColor: COL_TEXT, fontStyle: 'bold' },
       3: { textColor: COL_RED, fontStyle: 'bold' }
     },
     headStyles: { fillColor: COL_HEAD_BG, textColor: COL_CYAN, fontSize: 8.5, halign: 'center' },
@@ -3978,6 +4061,162 @@ function generateDsBreakupPDF() {
   doc.save('DS_Counselling_HQ_Breakup_' + new Date().toISOString().slice(0, 10) + '.pdf');
 }
 
+// ── Generate HQ Wise Report — pie chart + stat boxes + table for Approaching
+// Danger Counselling (mirrors generateHqWiseReportPDF for RS Practice) ──
+function generateDsHqWiseReportPDF() {
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    alert('PDF library not loaded. Check internet connection.'); return;
+  }
+  const data = window.dsBreakupPdfData;
+  if (!data || !data.rows || !data.rows.length) {
+    alert('No Approaching Danger Counselling breakup data loaded yet. Click ⟳ Refresh first.'); return;
+  }
+
+  const COL_LINE      = [214, 220, 228];
+  const COL_MUTED     = [110, 120, 132];
+  const COL_TEXT      = [30, 36, 44];
+  const COL_CYAN      = [0, 105, 148];
+  const COL_RED       = [190, 40, 38];
+  const COL_YELLOW    = [170, 118, 0];
+  const COL_HEAD_BG   = [237, 241, 246];
+  const COL_ROW_ALT   = [246, 248, 250];
+  const COL_BADGE_HI  = { bg: [223, 245, 224], text: [24, 120, 45] };
+  const COL_BADGE_MID = { bg: [255, 240, 205], text: [150, 100, 0] };
+  const COL_BADGE_LO  = { bg: [252, 224, 222], text: [176, 32, 30] };
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+  const pageWidth = doc.internal.pageSize.getWidth();
+
+  let y = 40;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(15);
+  doc.setTextColor(...COL_RED);
+  doc.text('APPROACHING DANGER COUNSELLING HQ WISE DATA', pageWidth / 2, y, { align: 'center' });
+  y += 16;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(...COL_MUTED);
+  doc.text('RAIPUR DIVISION  |  Generated: ' + new Date().toLocaleString('en-IN'), pageWidth / 2, y, { align: 'center' });
+  y += 14;
+
+  // ── Fixed reporting period label: 01.12.2025 → today's date ──
+  const todayStr = new Date().toLocaleDateString('en-GB').split('/').join('.');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9.5);
+  doc.setTextColor(...COL_CYAN);
+  doc.text('REPORT FROM 01.12.2025 TO ' + todayStr, pageWidth / 2, y, { align: 'center' });
+  y += 20;
+
+  // ── Pie / donut chart, centered above the table ──
+  const donutImg = buildDsDonutImage(data.rows, data.grandTotal, data.grandCrewTotal);
+  const imgSize = 190;
+  doc.setDrawColor(...COL_LINE);
+  doc.setFillColor(255, 255, 255);
+  doc.roundedRect((pageWidth - imgSize - 16) / 2, y, imgSize + 16, imgSize + 16, 8, 8, 'FD');
+  doc.addImage(donutImg, 'PNG', (pageWidth - imgSize) / 2, y + 8, imgSize, imgSize);
+  y += imgSize + 26;
+
+  // Legend row(s) under the donut, wrapped across the page width
+  doc.setFontSize(8.5);
+  doc.setFont('helvetica', 'normal');
+  let legendX = 34;
+  const legendRowH = 14;
+  data.rows.forEach(row => {
+    const label = row.hq + ' (' + row.dsVal + ')';
+    const labelW = doc.getTextWidth(label) + 16;
+    if (legendX + labelW > pageWidth - 34) { legendX = 34; y += legendRowH; }
+    doc.setFillColor(...hexToRgb(row.color));
+    doc.rect(legendX, y - 7, 8, 8, 'F');
+    doc.setTextColor(...COL_TEXT);
+    doc.text(label, legendX + 12, y);
+    legendX += labelW + 6;
+  });
+  y += legendRowH + 10;
+
+  // ── Summary stat boxes: Total Records, Division, Outstation, Unique Crew
+  // Covered, LP Counselled, ALP Counselled — laid out as a 3-column grid ──
+  const stStats = window.dsHqWiseStats || {};
+  const desgStats = window.dsDesgCounselled || {};
+  const divisionLabel = 'DS COUNT DIVISION (' + (stStats.divisionHqs || ['DBEC','BYT','DURG','R','DRZ']).join(', ') + ')';
+  const outstationLabel = 'DS COUNT OUTSTATION (' + (stStats.outstationHqCount || 0) + ' HQs)';
+  const stats = [
+    { label: 'TOTAL APPROACHING DANGER\nCOUNSELLING DONE (RECORDS)', value: stStats.totalRecords || 0, color: COL_RED },
+    { label: divisionLabel, value: stStats.divisionRecords || 0, color: COL_CYAN },
+    { label: outstationLabel, value: stStats.outstationRecords || 0, color: COL_YELLOW },
+    { label: 'UNIQUE CREW COVERED', value: stStats.uniqueCovered || 0, color: COL_RED },
+    { label: 'LP COUNSELLED\n(LP + LPP + LPM)', value: desgStats.lpCounselled || 0, color: COL_CYAN },
+    { label: 'ALP COUNSELLED\n(ALP + SR ALP)', value: desgStats.alpCounselled || 0, color: COL_YELLOW }
+  ];
+  const cols = 3;
+  const boxGap = 10;
+  const boxW = (pageWidth - 68 - boxGap * (cols - 1)) / cols;
+  const boxH = 46;
+  const rowGap = 8;
+  stats.forEach((st, i) => {
+    const col = i % cols, row = Math.floor(i / cols);
+    const bx = 34 + col * (boxW + boxGap);
+    const by = y + row * (boxH + rowGap);
+    doc.setDrawColor(...COL_LINE);
+    doc.setFillColor(...COL_HEAD_BG);
+    doc.roundedRect(bx, by, boxW, boxH, 5, 5, 'FD');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(...st.color);
+    doc.text(String(st.value), bx + boxW / 2, by + 20, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(6.5);
+    doc.setTextColor(...COL_MUTED);
+    const lines = doc.splitTextToSize(st.label, boxW - 8);
+    doc.text(lines, bx + boxW / 2, by + 30, { align: 'center' });
+  });
+  const statRows = Math.ceil(stats.length / cols);
+  y += statRows * boxH + (statRows - 1) * rowGap + 22;
+
+  const body = data.rows.map((r, i) => [i + 1, r.hq, r.crewVal, r.dsVal, r.pct + '%']);
+  const grandRowIndex = body.length;
+  body.push(['', 'GRAND TOTAL (' + data.hqCount + ' HQs)', data.grandCrewTotal, data.grandTotal, data.grandPct + '%']);
+
+  doc.autoTable({
+    startY: y,
+    margin: { left: 34, right: 34, top: 34, bottom: 34 },
+    head: [['#', 'HQ / LOBBY', 'TOTAL ALP', 'DS COMPLETED', '%']],
+    body: body,
+    styles: {
+      fontSize: 9.5, cellPadding: 6, halign: 'center',
+      textColor: COL_TEXT, fillColor: [255, 255, 255],
+      lineColor: COL_LINE, lineWidth: 0.6
+    },
+    columnStyles: {
+      0: { textColor: COL_MUTED, cellWidth: 28 },
+      1: { halign: 'left', textColor: COL_CYAN, fontStyle: 'bold' },
+      2: { textColor: COL_TEXT, fontStyle: 'bold' },
+      3: { textColor: COL_RED, fontStyle: 'bold' }
+    },
+    headStyles: { fillColor: COL_HEAD_BG, textColor: COL_CYAN, fontSize: 9, halign: 'center' },
+    alternateRowStyles: { fillColor: COL_ROW_ALT },
+    didParseCell: function (d) {
+      if (d.section === 'body' && d.column.index === 4) {
+        const val = parseFloat(d.cell.raw);
+        if (!isNaN(val)) {
+          const badge = val >= 75 ? COL_BADGE_HI : val >= 40 ? COL_BADGE_MID : COL_BADGE_LO;
+          d.cell.styles.fillColor = badge.bg;
+          d.cell.styles.textColor = badge.text;
+          d.cell.styles.fontStyle = 'bold';
+        }
+      }
+      if (d.row.index === grandRowIndex && d.section === 'body') {
+        d.cell.styles.fillColor = COL_HEAD_BG;
+        d.cell.styles.fontStyle = 'bold';
+        d.cell.styles.textColor = d.column.index === 1 ? COL_CYAN : COL_YELLOW;
+      }
+    },
+    theme: 'grid'
+  });
+
+  doc.save('DS_Counselling_HQ_Wise_Data_' + new Date().toISOString().slice(0, 10) + '.pdf');
+}
+
 // ── Export "RS Practice Done — HQ Wise Breakup" as PDF ──
 // Mirrors exactly what's on screen (same rows, same % values), using the
 // data cached by renderRsHqBreakup() so the PDF can't drift from the table.
@@ -4008,13 +4247,13 @@ function buildRsDonutImage(rows, grandTotal, grandAlpTotal) {
 
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillStyle = '#e7edf3';
+  ctx.fillStyle = '#1a1f26';
   ctx.font = 'bold ' + Math.round(size * 0.135) + 'px Arial, sans-serif';
   ctx.fillText(String(grandTotal), cx, cy - size * 0.045);
-  ctx.fillStyle = '#8fd6c4';
+  ctx.fillStyle = '#1a8f5e';
   ctx.font = Math.round(size * 0.05) + 'px Arial, sans-serif';
   ctx.fillText('RS DONE', cx, cy + size * 0.06);
-  ctx.fillStyle = '#8694a3';
+  ctx.fillStyle = '#5a6472';
   ctx.font = Math.round(size * 0.04) + 'px Arial, sans-serif';
   ctx.fillText('of ' + grandAlpTotal + ' ALP', cx, cy + size * 0.115);
 
@@ -4035,20 +4274,20 @@ function generateRsBreakupPDF() {
     alert('No RS Practice breakup data loaded yet. Click ⟳ Refresh first.'); return;
   }
 
-  // ── Dashboard dark theme colors (matching the on-screen CSS) ──
-  const COL_BG        = [11, 15, 20];    // --bg
-  const COL_PANEL     = [17, 22, 29];    // --panel
-  const COL_LINE      = [35, 44, 56];    // --line
-  const COL_MUTED     = [134, 148, 163]; // --muted
-  const COL_TEXT      = [231, 237, 243]; // --text
-  const COL_CYAN      = [0, 212, 255];   // hq column / headers
-  const COL_GREEN     = [43, 182, 115];  // --signal-green
-  const COL_YELLOW    = [240, 180, 41];  // --signal-yellow
-  const COL_HEAD_BG   = [8, 21, 32];     // #081520
-  const COL_ROW_ALT   = [14, 19, 25];    // #0e1319
-  const COL_BADGE_HI  = { bg: [42, 40, 0],  text: [255, 230, 128] };
-  const COL_BADGE_MID = { bg: [42, 26, 6],  text: [240, 180, 41] };
-  const COL_BADGE_LO  = { bg: [42, 20, 20], text: [224, 65, 63] };
+  // ── White report theme colors ──
+  const COL_BG        = [255, 255, 255]; // page background
+  const COL_PANEL     = [255, 255, 255]; // table cell fill
+  const COL_LINE      = [214, 220, 228]; // borders
+  const COL_MUTED     = [110, 120, 132]; // muted gray
+  const COL_TEXT      = [30, 36, 44];    // body text
+  const COL_CYAN      = [0, 105, 148];   // hq column / headers (darkened for white bg)
+  const COL_GREEN     = [21, 143, 94];   // --signal-green (darkened)
+  const COL_YELLOW    = [170, 118, 0];   // --signal-yellow (darkened)
+  const COL_HEAD_BG   = [237, 241, 246]; // light header band
+  const COL_ROW_ALT   = [246, 248, 250]; // light alt row
+  const COL_BADGE_HI  = { bg: [223, 245, 224], text: [24, 120, 45] };
+  const COL_BADGE_MID = { bg: [255, 240, 205], text: [150, 100, 0] };
+  const COL_BADGE_LO  = { bg: [252, 224, 222], text: [176, 32, 30] };
 
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
@@ -4099,7 +4338,7 @@ function generateRsBreakupPDF() {
     columnStyles: {
       0: { textColor: COL_MUTED, cellWidth: 26 },
       1: { halign: 'left', textColor: COL_CYAN, fontStyle: 'bold' },
-      2: { textColor: [255, 255, 255], fontStyle: 'bold' },
+      2: { textColor: COL_TEXT, fontStyle: 'bold' },
       3: { textColor: COL_GREEN, fontStyle: 'bold' }
     },
     headStyles: { fillColor: COL_HEAD_BG, textColor: COL_CYAN, fontSize: 8.5, halign: 'center' },
@@ -4151,6 +4390,155 @@ function generateRsBreakupPDF() {
   });
 
   doc.save('RS_Practice_HQ_Breakup_' + new Date().toISOString().slice(0, 10) + '.pdf');
+}
+
+// ── Generate HQ Wise Report — simple table-only PDF of RS Practice HQ breakup ──
+function generateHqWiseReportPDF() {
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    alert('PDF library not loaded. Check internet connection.'); return;
+  }
+  const data = window.rsBreakupPdfData;
+  if (!data || !data.rows || !data.rows.length) {
+    alert('No RS Practice breakup data loaded yet. Click ⟳ Refresh first.'); return;
+  }
+
+  const COL_LINE      = [214, 220, 228];
+  const COL_MUTED     = [110, 120, 132];
+  const COL_TEXT      = [30, 36, 44];
+  const COL_CYAN      = [0, 105, 148];
+  const COL_GREEN     = [21, 143, 94];
+  const COL_YELLOW    = [170, 118, 0];
+  const COL_HEAD_BG   = [237, 241, 246];
+  const COL_ROW_ALT   = [246, 248, 250];
+  const COL_BADGE_HI  = { bg: [223, 245, 224], text: [24, 120, 45] };
+  const COL_BADGE_MID = { bg: [255, 240, 205], text: [150, 100, 0] };
+  const COL_BADGE_LO  = { bg: [252, 224, 222], text: [176, 32, 30] };
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+  const pageWidth = doc.internal.pageSize.getWidth();
+
+  let y = 40;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(15);
+  doc.setTextColor(...COL_GREEN);
+  doc.text('RS PRACTICE HQ WISE DATA', pageWidth / 2, y, { align: 'center' });
+  y += 16;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(...COL_MUTED);
+  doc.text('RAIPUR DIVISION  |  Generated: ' + new Date().toLocaleString('en-IN'), pageWidth / 2, y, { align: 'center' });
+  y += 14;
+
+  // ── Fixed reporting period label: 01.12.2025 → today's date ──
+  const todayStr = new Date().toLocaleDateString('en-GB').split('/').join('.');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9.5);
+  doc.setTextColor(...COL_CYAN);
+  doc.text('REPORT FROM 01.12.2025 TO ' + todayStr, pageWidth / 2, y, { align: 'center' });
+  y += 20;
+
+  // ── Pie / donut chart, centered above the table ──
+  const donutImg = buildRsDonutImage(data.rows, data.grandTotal, data.grandAlpTotal);
+  const imgSize = 190;
+  doc.setDrawColor(...COL_LINE);
+  doc.setFillColor(255, 255, 255);
+  doc.roundedRect((pageWidth - imgSize - 16) / 2, y, imgSize + 16, imgSize + 16, 8, 8, 'FD');
+  doc.addImage(donutImg, 'PNG', (pageWidth - imgSize) / 2, y + 8, imgSize, imgSize);
+  y += imgSize + 26;
+
+  // Legend row(s) under the donut, wrapped across the page width
+  doc.setFontSize(8.5);
+  doc.setFont('helvetica', 'normal');
+  let legendX = 34;
+  const legendRowH = 14;
+  data.rows.forEach(row => {
+    const label = row.hq + ' (' + row.rsVal + ')';
+    const labelW = doc.getTextWidth(label) + 16;
+    if (legendX + labelW > pageWidth - 34) { legendX = 34; y += legendRowH; }
+    doc.setFillColor(...hexToRgb(row.color));
+    doc.rect(legendX, y - 7, 8, 8, 'F');
+    doc.setTextColor(...COL_TEXT);
+    doc.text(label, legendX + 12, y);
+    legendX += labelW + 6;
+  });
+  y += legendRowH + 10;
+
+  // ── Summary stat boxes: Total Records, Division, Outstation, Unique ALP Covered ──
+  // Sourced from the RS Practice sheet's own ALP HQ / ALP ID columns on the
+  // currently filtered rows (see applyFilters) — not the roster breakdown —
+  // so these always reflect the real sheet data regardless of roster HQ setup.
+  const stStats = window.rsHqWiseStats || {};
+  const divisionLabel = 'RS COUNT DIVISION (' + (stStats.divisionHqs || ['DBEC','BYT','DURG','R','DRZ']).join(', ') + ')';
+  const outstationLabel = 'RS COUNT OUTSTATION (' + (stStats.outstationHqCount || 0) + ' HQs)';
+  const stats = [
+    { label: 'TOTAL RS PRACTICE DONE\n(COUNT TOTAL RECORDS)', value: stStats.totalRecords || 0, color: COL_GREEN },
+    { label: divisionLabel, value: stStats.divisionRecords || 0, color: COL_CYAN },
+    { label: outstationLabel, value: stStats.outstationRecords || 0, color: COL_YELLOW },
+    { label: 'UNIQUE ALP COVERED', value: stStats.uniqueAlpCovered || 0, color: COL_GREEN }
+  ];
+  const boxGap = 10;
+  const boxW = (pageWidth - 68 - boxGap * 3) / 4;
+  const boxH = 46;
+  stats.forEach((st, i) => {
+    const bx = 34 + i * (boxW + boxGap);
+    doc.setDrawColor(...COL_LINE);
+    doc.setFillColor(...COL_HEAD_BG);
+    doc.roundedRect(bx, y, boxW, boxH, 5, 5, 'FD');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(...st.color);
+    doc.text(String(st.value), bx + boxW / 2, y + 20, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(6.5);
+    doc.setTextColor(...COL_MUTED);
+    const lines = doc.splitTextToSize(st.label, boxW - 8);
+    doc.text(lines, bx + boxW / 2, y + 30, { align: 'center' });
+  });
+  y += boxH + 22;
+
+  const body = data.rows.map((r, i) => [i + 1, r.hq, r.alpVal, r.rsVal, r.pct + '%', r.repeatPct + '%']);
+  const grandRowIndex = body.length;
+  body.push(['', 'GRAND TOTAL (' + data.hqCount + ' HQs)', data.grandAlpTotal, data.grandTotal, data.grandPct + '%', data.grandRepeatPct + '%']);
+
+  doc.autoTable({
+    startY: y,
+    margin: { left: 34, right: 34, top: 34, bottom: 34 },
+    head: [['#', 'HQ / LOBBY', 'TOTAL ALP', 'RS COMPLETED', '%', 'NO OF TIMES (%)']],
+    body: body,
+    styles: {
+      fontSize: 9.5, cellPadding: 6, halign: 'center',
+      textColor: COL_TEXT, fillColor: [255, 255, 255],
+      lineColor: COL_LINE, lineWidth: 0.6
+    },
+    columnStyles: {
+      0: { textColor: COL_MUTED, cellWidth: 28 },
+      1: { halign: 'left', textColor: COL_CYAN, fontStyle: 'bold' },
+      2: { textColor: COL_TEXT, fontStyle: 'bold' },
+      3: { textColor: COL_GREEN, fontStyle: 'bold' }
+    },
+    headStyles: { fillColor: COL_HEAD_BG, textColor: COL_CYAN, fontSize: 9, halign: 'center' },
+    alternateRowStyles: { fillColor: COL_ROW_ALT },
+    didParseCell: function (d) {
+      if (d.section === 'body' && (d.column.index === 4 || d.column.index === 5)) {
+        const val = parseFloat(d.cell.raw);
+        if (!isNaN(val)) {
+          const badge = val >= 75 ? COL_BADGE_HI : val >= 40 ? COL_BADGE_MID : COL_BADGE_LO;
+          d.cell.styles.fillColor = badge.bg;
+          d.cell.styles.textColor = badge.text;
+          d.cell.styles.fontStyle = 'bold';
+        }
+      }
+      if (d.row.index === grandRowIndex && d.section === 'body') {
+        d.cell.styles.fillColor = COL_HEAD_BG;
+        d.cell.styles.fontStyle = 'bold';
+        d.cell.styles.textColor = d.column.index === 1 ? COL_CYAN : COL_YELLOW;
+      }
+    },
+    theme: 'grid'
+  });
+
+  doc.save('RS_Practice_HQ_Wise_Data_' + new Date().toISOString().slice(0, 10) + '.pdf');
 }
 
 // ── Render / filter the Repeated Names — RS Practice table ──
