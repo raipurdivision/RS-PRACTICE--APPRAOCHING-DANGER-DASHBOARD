@@ -1207,6 +1207,8 @@
         <option value="">All Designations</option>
       </select>
       <button class="hq-action-btn cyan" onclick="hqFetchData()">⟳ Refresh</button>
+      <button class="hq-action-btn" onclick="hqPickFile()" title="Load the crew roster from an .xlsx / .csv file on this device">📂 Load Roster File</button>
+      <input type="file" id="hqRosterFile" accept=".xlsx,.xls,.csv" style="display:none;" onchange="hqLoadFromFile(this)">
       <button class="hq-action-btn" style="border-color:#2ecc71;color:#2ecc71;" onclick="showCoverageModal()">🆔 Covered / Uncovered</button>
       <button class="hq-action-btn" onclick="hqExpandAll()">▼ Expand All</button>
       <button class="hq-action-btn" onclick="hqCollapseAll()">▲ Collapse All</button>
@@ -1215,6 +1217,8 @@
         <span id="hqStatusText">Ready</span>
       </div>
     </div>
+
+    <div id="hqErrBanner" style="display:none;margin:0 0 14px;padding:14px 16px;border:1px solid var(--signal-red);border-radius:8px;background:#2a1216;"></div>
 
     <div class="hq-summary-strip" id="hqSummaryStrip"></div>
 
@@ -3151,29 +3155,197 @@ function hqSetStatus(state, msg) {
   t.textContent = msg;
 }
 
-async function hqFetchData() {
-  hqSetStatus('spin', 'Fetching crew roster…');
-  document.getElementById('hqGrid').innerHTML =
-    '<div class="hq-empty" style="font-family:\'Courier New\',monospace;">⟳ Loading from Google Sheet…</div>';
+const HQ_APPS_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbxIfH_Y2vqZsY9-qIk145JSIhQUYa9KbwxswMGG85M8sMj4v08JMmJndbm6HQUzG3qRpA/exec';
+const HQ_URL_KEY   = 'hqAppsUrlOverride_v1';
+const HQ_CACHE_KEY = 'hqRosterCache_v1';
 
-  const url = 'https://script.google.com/macros/s/AKfycbxIfH_Y2vqZsY9-qIk145JSIhQUYa9KbwxswMGG85M8sMj4v08JMmJndbm6HQUzG3qRpA/exec';
+function hqAppsUrl() {
+  try { return localStorage.getItem(HQ_URL_KEY) || HQ_APPS_URL_DEFAULT; } catch (e) { return HQ_APPS_URL_DEFAULT; }
+}
+function hqSetUrl() {
+  const cur = hqAppsUrl();
+  const v = prompt('Paste the roster Apps Script Web App URL (ends with /exec).\nLeave empty to reset to default:', cur);
+  if (v === null) return;
   try {
-    const res  = await fetch(url, { cache: 'no-store' });
-    if (!res.ok) throw new Error('HTTP ' + res.status + ' — ensure sheet is shared as Anyone with the link → Viewer');
-    const json = await res.json();
-    if (json.error) throw new Error(json.error);
+    if (v.trim()) localStorage.setItem(HQ_URL_KEY, v.trim()); else localStorage.removeItem(HQ_URL_KEY);
+  } catch (e) {}
+  hqFetchData();
+}
+function hqSheetUrl() {
+  return 'https://docs.google.com/spreadsheets/d/' + HQ_SHEET_ID + '/gviz/tq?tqx=out:json&headers=1&gid=' + HQ_SHEET_GID;
+}
+
+function hqCacheSave(json) {
+  try { localStorage.setItem(HQ_CACHE_KEY, JSON.stringify({ t: Date.now(), json })); } catch (e) {}
+}
+function hqCacheLoad() {
+  try {
+    const o = JSON.parse(localStorage.getItem(HQ_CACHE_KEY) || 'null');
+    return (o && o.json && o.json.rows && o.json.rows.length) ? o : null;
+  } catch (e) { return null; }
+}
+
+async function hqFetchWithTimeout(url, ms) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), ms);
+  try { return await fetch(url, { signal: ctrl.signal, redirect: 'follow' }); }
+  finally { clearTimeout(timer); }
+}
+
+// Source 1: Apps Script web app → {cols, rows}
+async function hqLoadFromAppsScript() {
+  const res = await hqFetchWithTimeout(hqAppsUrl() + '?_=' + Date.now(), 20000);
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const text = await res.text();
+  let json;
+  try { json = JSON.parse(text); }
+  catch (e) { throw new Error('did not return JSON (deployment access not "Anyone", or script error)'); }
+  if (json.error) throw new Error(json.error);
+  if (!json.rows || !json.rows.length) throw new Error('returned 0 rows');
+  return json;
+}
+
+// Convert a GViz response object → {cols, rows}
+function hqGvizToJson(g) {
+  if (g.status === 'error') {
+    throw new Error((g.errors && g.errors[0] && (g.errors[0].detailed_message || g.errors[0].message)) || 'sheet query error');
+  }
+  const table = g.table || {};
+  let cols = (table.cols || []).map(c => (c.label || '').trim());
+  let rawRows = table.rows || [];
+  if (cols.every(c => !c) && rawRows.length) {
+    cols = (rawRows[0].c || []).map((c, i) => String((c && c.v != null) ? c.v : ('Col' + (i + 1))).trim());
+    rawRows = rawRows.slice(1);
+  }
+  cols = cols.map((c, i) => c || ('Col' + (i + 1)));
+  const rows = rawRows.map(r => {
+    const o = {};
+    cols.forEach((name, i) => { const cell = r.c && r.c[i]; o[name] = (cell && cell.v != null) ? cell.v : ''; });
+    return o;
+  });
+  if (!rows.length) throw new Error('roster sheet has 0 rows');
+  return { cols, rows };
+}
+
+// Source 2: read the sheet with fetch() (needs sheet shared "Anyone with the link")
+async function hqLoadFromSheet() {
+  const res = await hqFetchWithTimeout(hqSheetUrl() + '&_=' + Date.now(), 20000);
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const text = await res.text();
+  const a = text.indexOf('{'), b = text.lastIndexOf('}');
+  if (a === -1 || b === -1) throw new Error('sheet is not public');
+  let g;
+  try { g = JSON.parse(text.slice(a, b + 1)); } catch (e) { throw new Error('could not parse sheet response'); }
+  return hqGvizToJson(g);
+}
+
+// Source 3: same sheet via <script> tag (JSONP) — not affected by CORS/fetch blocking
+function hqLoadFromSheetJsonp() {
+  return new Promise((resolve, reject) => {
+    const cb = '__hqGviz' + Date.now();
+    const sc = document.createElement('script');
+    let done = false;
+    const cleanup = () => { done = true; clearTimeout(timer); try { delete window[cb]; } catch (e) { window[cb] = undefined; } sc.remove(); };
+    const timer = setTimeout(() => { if (!done) { cleanup(); reject(new Error('no valid response (sheet not public / not shared "Anyone with the link")')); } }, 12000);
+    window[cb] = g => { if (done) return; cleanup(); try { resolve(hqGvizToJson(g)); } catch (e) { reject(e); } };
+    sc.onerror = () => { if (!done) { cleanup(); reject(new Error('script blocked or network error')); } };
+    sc.src = hqSheetUrl().replace('out:json', 'out:json;responseHandler:' + cb) + '&_=' + Date.now();
+    document.head.appendChild(sc);
+  });
+}
+
+function hqPickFile() { document.getElementById('hqRosterFile').click(); }
+
+async function hqLoadFromFile(input) {
+  const file = input.files && input.files[0];
+  input.value = '';
+  if (!file) return;
+  try {
+    if (!window.XLSX) throw new Error('Excel library not loaded (check internet)');
+    const wb = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+    if (aoa.length < 2) throw new Error('file has no data rows');
+    const cols = aoa[0].map((c, i) => String(c).trim() || ('Col' + (i + 1)));
+    const rows = aoa.slice(1)
+      .filter(r => r.some(v => String(v).trim() !== ''))
+      .map(r => { const o = {}; cols.forEach((c, i) => o[c] = r[i] != null ? r[i] : ''); return o; });
+    const json = { cols, rows };
     hqParseRaw(json);
     hqFetched = true;
-    hqSetStatus('ok', hqAllCrew.length + ' crew loaded · ' + new Date().toLocaleTimeString('en-IN'));
-  } catch(e) {
-    hqSetStatus('err', 'Fetch failed');
-    document.getElementById('hqGrid').innerHTML =
-      `<div class="hq-empty">
-        <div style="font-size:28px;margin-bottom:12px;">⚠️</div>
-        <div style="color:var(--signal-red);margin-bottom:10px;font-weight:700;font-size:14px;">Could not load crew roster.</div>
-        <div style="font-size:12px;color:var(--muted);font-family:'Courier New',monospace;margin-top:8px;">Error: ${esc(e.message)}</div>
-      </div>`;
+    hqCacheSave(json);
+    hqHideBanner();
+    hqSetStatus('ok', hqAllCrew.length + ' crew loaded (file: ' + file.name + ')');
+  } catch (e) {
+    hqSetStatus('err', 'File load failed');
+    alert('Could not read roster file: ' + e.message);
   }
+}
+
+function hqHideBanner() {
+  const b = document.getElementById('hqErrBanner');
+  if (b) { b.style.display = 'none'; b.innerHTML = ''; }
+}
+function hqShowBanner(errs, note) {
+  const b = document.getElementById('hqErrBanner');
+  if (!b) return;
+  b.innerHTML =
+    `<div style="color:var(--signal-red);font-weight:700;font-size:14px;margin-bottom:8px;">⚠️ Could not load crew roster ${note ? '— ' + esc(note) : ''}</div>
+     <div style="font-size:12px;color:#e6c3c8;font-family:'Courier New',monospace;line-height:1.8;">${errs.map(x => esc(x)).join('<br>')}</div>
+     <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+       <button class="hq-action-btn cyan" onclick="hqFetchData()">⟳ Retry</button>
+       <button class="hq-action-btn" onclick="hqPickFile()">📂 Load Roster File (.xlsx / .csv)</button>
+       <button class="hq-action-btn" onclick="hqSetUrl()">⚙ Set roster script URL</button>
+       <a class="hq-action-btn" style="text-decoration:none;" target="_blank" rel="noopener" href="${esc(hqAppsUrl())}">🔗 Test Apps Script link</a>
+       <a class="hq-action-btn" style="text-decoration:none;" target="_blank" rel="noopener" href="https://docs.google.com/spreadsheets/d/${HQ_SHEET_ID}/edit">🔗 Open roster sheet</a>
+     </div>`;
+  b.style.display = 'block';
+}
+
+async function hqFetchData() {
+  hqSetStatus('spin', 'Fetching crew roster…');
+  hqHideBanner();
+  document.getElementById('hqGrid').innerHTML =
+    '<div class="hq-empty" style="font-family:\'Courier New\',monospace;">⟳ Loading crew roster…</div>';
+
+  const errs = [];
+  let json = null, source = '';
+  const sources = [
+    ['Apps Script',        hqLoadFromAppsScript],
+    ['Google Sheet',       hqLoadFromSheet],
+    ['Google Sheet (alt)', hqLoadFromSheetJsonp],
+  ];
+  for (const [name, fn] of sources) {
+    try { json = await fn(); source = name; break; }
+    catch (e) { errs.push(name + ' → ' + (e.name === 'AbortError' ? 'timed out' : e.message)); }
+  }
+
+  if (json) {
+    try {
+      hqParseRaw(json);
+      hqFetched = true;
+      hqCacheSave(json);
+      hqSetStatus('ok', hqAllCrew.length + ' crew loaded (' + source + ') · ' + new Date().toLocaleTimeString('en-IN'));
+      if (errs.length) console.warn('HQ roster: earlier sources failed.', errs);
+      return;
+    } catch (e) { errs.push('Parse → ' + e.message); }
+  }
+
+  const cached = hqCacheLoad();
+  if (cached) {
+    try {
+      hqParseRaw(cached.json);
+      hqFetched = true;
+      hqSetStatus('spin', hqAllCrew.length + ' crew (CACHED ' + new Date(cached.t).toLocaleString('en-IN') + ')');
+      hqShowBanner(errs, 'showing last saved roster');
+      return;
+    } catch (e) {}
+  }
+
+  hqSetStatus('err', 'Fetch failed');
+  hqShowBanner(errs, '');
+  document.getElementById('hqGrid').innerHTML =
+    '<div class="hq-empty">No roster loaded — see the red box above.</div>';
 }
 
 function hqParseRaw(json) {
