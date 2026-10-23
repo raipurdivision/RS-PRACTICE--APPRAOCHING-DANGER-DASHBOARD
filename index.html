@@ -235,6 +235,7 @@
   .tab-bar {
     display: flex;
     gap: 4px;
+    flex-wrap: wrap;
     margin-bottom: 20px;
     border-bottom: 2px solid var(--line);
     padding-bottom: 0;
@@ -846,6 +847,84 @@
   }
   .ds-hq-select:focus { border-color: #00d4ff; box-shadow: 0 0 0 2px rgba(0,212,255,0.12); }
   .ds-hq-select option { background: #161d26; color: var(--text); }
+
+  /* ── DATE WISE DATA TAB ── */
+  .tab-btn.dw-tab.active { border-color:#ff9f43; color:#ff9f43; border-bottom-color: var(--panel-2); }
+  .dw-filter-bar { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px 18px; margin-bottom:16px; display:flex; flex-direction:column; gap:14px; }
+  .dw-filter-row { display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+  .dw-filter-row + .dw-filter-row { padding-top:14px; border-top:1px solid var(--line); }
+  .dw-filter-row label { font-size:11px; text-transform:uppercase; letter-spacing:1.5px; color:var(--muted); white-space:nowrap; }
+  .dw-range-chip { padding:6px 13px; border-radius:20px; border:1px solid var(--line); background:var(--panel-2); color:var(--muted); font-size:11.5px; cursor:pointer; font-family:'Segoe UI',Arial,sans-serif; transition:all .15s; }
+  .dw-range-chip:hover { border-color:#ff9f43; color:#ff9f43; }
+  .dw-range-chip.active { border-color:#ff9f43; color:#ff9f43; background:#2a1c0a; font-weight:700; }
+  .dw-summary-strip { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:18px; }
+  @media (max-width:900px){ .dw-summary-strip { grid-template-columns:repeat(2,1fr); } }
+  .dw-sum-card { background:var(--panel); border:1px solid var(--line); border-left:4px solid #ff9f43; border-radius:9px; padding:14px 16px; }
+  .dw-sum-label { font-size:10.5px; letter-spacing:1.6px; text-transform:uppercase; color:var(--muted); font-family:'Courier New',monospace; }
+  .dw-sum-value { font-size:23px; font-weight:700; color:#ff9f43; font-family:'Courier New',monospace; margin-top:5px; }
+  .dw-sum-card.rs { border-left-color:#2ecc71; } .dw-sum-card.rs .dw-sum-value { color:#2ecc71; }
+  .dw-sum-card.ds { border-left-color:var(--signal-red); } .dw-sum-card.ds .dw-sum-value { color:var(--signal-red); }
+  .dw-sum-card.neutral { border-left-color:#00d4ff; } .dw-sum-card.neutral .dw-sum-value { color:#00d4ff; }
+
+  .dw-date-card { background:var(--panel); border:1px solid var(--line); border-radius:10px; margin-bottom:10px; overflow:hidden; transition:border-color .15s; }
+  .dw-date-card.open { border-color:#ff9f43; }
+  .dw-date-head { display:flex; align-items:center; gap:14px; padding:13px 16px; cursor:pointer; user-select:none; flex-wrap:wrap; }
+  .dw-date-head:hover { background:var(--panel-2); }
+  .dw-date-label { font-family:'Courier New',monospace; font-size:15px; font-weight:700; color:#ff9f43; letter-spacing:0.5px; min-width:190px; }
+  .dw-date-label .dash { color:var(--muted); margin:0 4px; }
+  .dw-date-label .cnt { color:#fff; }
+  .dw-mini-chips { display:flex; gap:8px; flex-wrap:wrap; }
+  .dw-mini { font-size:11px; font-family:'Courier New',monospace; padding:3px 9px; border-radius:14px; border:1px solid var(--line); color:var(--muted); }
+  .dw-mini.rs { border-color:#2ecc7144; color:#2ecc71; }
+  .dw-mini.ds { border-color:#e0413f44; color:#e0413f; }
+  .dw-toggle { margin-left:auto; font-size:12px; color:var(--muted); font-family:'Courier New',monospace; transition:transform .2s; }
+  .dw-date-card.open .dw-toggle { transform:rotate(90deg); color:#ff9f43; }
+  .dw-date-body { display:none; border-top:1px solid var(--line); }
+  .dw-date-card.open .dw-date-body { display:block; }
+  .dw-date-body .table-scroll { max-height:none; }
+  .dw-date-body table { width:100%; border-collapse:collapse; font-size:12px; }
+  .dw-date-body thead th { position:sticky; top:0; background:var(--panel-2); color:var(--muted); font-size:10.5px; letter-spacing:1.2px; text-transform:uppercase; padding:9px 10px; text-align:left; border-bottom:1px solid var(--line); white-space:nowrap; }
+  .dw-date-body tbody td { padding:8px 10px; border-bottom:1px solid #1a222c; color:var(--text); vertical-align:top; }
+  .dw-date-body tbody tr:hover { background:#141b24; }
+  .dw-sheet-tag { font-size:10px; font-family:'Courier New',monospace; padding:2px 7px; border-radius:4px; border:1px solid; white-space:nowrap; }
+  .dw-sheet-tag.rs { color:#2ecc71; border-color:#2ecc7155; background:#0d2016; }
+  .dw-sheet-tag.ds { color:#e0413f; border-color:#e0413f55; background:#240f0f; }
+  .dw-empty { padding:40px; text-align:center; color:var(--muted); font-size:13px; }
+  .dw-sort-btn { background:var(--panel-2); border:1px solid var(--line); color:var(--muted); padding:9px 14px; border-radius:7px; cursor:pointer; font-size:12px; font-family:'Segoe UI',Arial,sans-serif; }
+  .dw-sort-btn:hover { border-color:#ff9f43; color:#ff9f43; }
+
+  /* ── CLI DATE WISE MODAL ── */
+  .clidw-toolbar { display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:12px 16px; border-bottom:1px solid var(--line); background:var(--panel); position:sticky; top:0; z-index:5; }
+  .clidw-chip { font-size:11px; font-family:'Courier New',monospace; padding:4px 10px; border-radius:14px; border:1px solid var(--line); color:var(--muted); }
+  .clidw-chip b { color:#ff9f43; }
+  .clidw-card { border:1px solid var(--line); border-radius:9px; margin:12px 16px; overflow:hidden; background:var(--panel); }
+  .clidw-card.open { border-color:#9b59b6; }
+  .clidw-head { display:flex; align-items:center; gap:12px; padding:12px 14px; cursor:pointer; user-select:none; flex-wrap:wrap; }
+  .clidw-head:hover { background:var(--panel-2); }
+  .clidw-name { font-size:13.5px; font-weight:700; letter-spacing:0.4px; color:var(--text); }
+  .clidw-total { font-family:'Courier New',monospace; font-size:16px; font-weight:700; color:#ff9f43; letter-spacing:0.5px; }
+  .clidw-headline { font-family:'Courier New',monospace; font-size:14px; font-weight:700; letter-spacing:1.2px; color:#ff9f43; margin-top:7px; background:#2a1c0a; border:1px solid #ff9f4355; padding:7px 12px; border-radius:6px; display:inline-block; }
+  .clidw-count { font-size:11px; font-family:'Courier New',monospace; color:#9b59b6; border:1px solid #9b59b655; background:#1a1226; padding:3px 9px; border-radius:14px; }
+  .clidw-chev { margin-left:auto; color:var(--muted); font-size:12px; transition:transform .2s; }
+  .clidw-card.open .clidw-chev { transform:rotate(90deg); color:#9b59b6; }
+  .clidw-body { display:none; border-top:1px solid var(--line); padding:8px 14px 12px; }
+  .clidw-card.open .clidw-body { display:block; }
+  .clidw-date { display:flex; align-items:center; gap:12px; padding:8px 10px; margin-top:6px; border:1px solid var(--line); border-radius:7px; cursor:pointer; background:var(--panel-2); flex-wrap:wrap; }
+  .clidw-date:hover { border-color:#ff9f43; }
+  .clidw-date.open { border-color:#ff9f43; }
+  .clidw-date-label { font-family:'Courier New',monospace; font-size:13px; font-weight:700; color:#ff9f43; min-width:170px; }
+  .clidw-date-entries { display:none; margin:6px 0 12px; }
+  .clidw-date.open + .clidw-date-entries { display:block; }
+  .clidw-date-entries table { width:100%; border-collapse:collapse; font-size:11.5px; }
+  .clidw-date-entries th { background:var(--panel-2); color:var(--muted); font-size:10px; letter-spacing:1px; text-transform:uppercase; padding:7px 9px; text-align:left; border-bottom:1px solid var(--line); }
+  .clidw-date-entries td { padding:6px 9px; border-bottom:1px solid #1a222c; }
+  .clidw-empty { padding:40px; text-align:center; color:var(--muted); font-size:13px; }
+  @media (max-width:700px){
+    .dw-filter-row { gap:10px; }
+    .dw-filter-row .styled-select, .dw-filter-row .date-input { min-width:0; width:100%; }
+    .dw-date-label { min-width:0; font-size:13.5px; }
+    .dw-date-body table { font-size:11px; }
+  }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
@@ -874,6 +953,7 @@
     <button class="tab-btn cli-tab" id="tabCliReport" onclick="switchTab('cliReport')">👤 CLI Wise Data Report</button>
     <button class="tab-btn lp-tab" id="tabLpReport" onclick="switchTab('lpReport')">🚂 LP/ALP Wise Data</button>
     <button class="tab-btn hq-tab" id="tabHqReport" onclick="switchTab('hqReport')">🏢 HQ Wise Summary</button>
+    <button class="tab-btn dw-tab" id="tabDateWise" onclick="switchTab('dateWise')">📅 Date Wise Data</button>
   </div>
 
   <!-- ── TAB: Dashboard ── -->
@@ -1207,8 +1287,6 @@
         <option value="">All Designations</option>
       </select>
       <button class="hq-action-btn cyan" onclick="hqFetchData()">⟳ Refresh</button>
-      <button class="hq-action-btn" onclick="hqPickFile()" title="Load the crew roster from an .xlsx / .csv file on this device">📂 Load Roster File</button>
-      <input type="file" id="hqRosterFile" accept=".xlsx,.xls,.csv" style="display:none;" onchange="hqLoadFromFile(this)">
       <button class="hq-action-btn" style="border-color:#2ecc71;color:#2ecc71;" onclick="showCoverageModal()">🆔 Covered / Uncovered</button>
       <button class="hq-action-btn" onclick="hqExpandAll()">▼ Expand All</button>
       <button class="hq-action-btn" onclick="hqCollapseAll()">▲ Collapse All</button>
@@ -1217,8 +1295,6 @@
         <span id="hqStatusText">Ready</span>
       </div>
     </div>
-
-    <div id="hqErrBanner" style="display:none;margin:0 0 14px;padding:14px 16px;border:1px solid var(--signal-red);border-radius:8px;background:#2a1216;"></div>
 
     <div class="hq-summary-strip" id="hqSummaryStrip"></div>
 
@@ -1404,6 +1480,108 @@
 
     <div class="footer-note" style="margin-top:28px;">HQ WISE CREW ROSTER · RAIPUR DIVISION · SOUTH EAST CENTRAL RAILWAY</div>
   </div><!-- end tabContentHqReport -->
+
+  <!-- ── TAB: Date Wise Data ── -->
+  <div class="tab-content" id="tabContentDateWise">
+
+    <div class="dw-filter-bar">
+      <!-- Row 1: date range + quick ranges -->
+      <div class="dw-filter-row">
+        <label style="color:#ff9f43;">📅 FROM DATE :</label>
+        <input type="date" class="date-input" id="dwFromDate" onchange="dwSetRangeActive(null); buildDateWise()">
+        <label style="color:#ff9f43;">TO DATE :</label>
+        <input type="date" class="date-input" id="dwToDate" onchange="dwSetRangeActive(null); buildDateWise()">
+        <span class="date-range-badge" id="dwRangeBadge"></span>
+        <div class="dw-mini-chips" style="margin-left:auto;">
+          <button class="dw-range-chip" data-range="today" onclick="dwQuickRange('today')">Latest Day</button>
+          <button class="dw-range-chip" data-range="7d" onclick="dwQuickRange('7d')">Last 7 Days</button>
+          <button class="dw-range-chip" data-range="30d" onclick="dwQuickRange('30d')">Last 30 Days</button>
+          <button class="dw-range-chip" data-range="month" onclick="dwQuickRange('month')">This Month</button>
+          <button class="dw-range-chip active" data-range="all" onclick="dwQuickRange('all')">All Dates</button>
+        </div>
+      </div>
+
+      <!-- Row 2: sheet name + search + actions -->
+      <div class="dw-filter-row">
+        <label>Sheet Name :</label>
+        <select class="styled-select" id="dwSheetSelector" onchange="buildDateWise()" style="border-color:#ff9f43;min-width:300px;">
+          <option value="both">📋 Both Sheets</option>
+          <option value="rs">🛠 RS PRACTICE</option>
+          <option value="ds">⛔ APPROACHING DANGER COUNSELLING</option>
+        </select>
+
+        <label style="margin-left:6px;">Search :</label>
+        <input type="text" class="date-input" id="dwSearch" placeholder="name / CLI / HQ / ID"
+               style="width:220px;" oninput="buildDateWise()">
+
+        <button class="dw-sort-btn" id="dwSortBtn" onclick="dwToggleSort()">⇅ Newest First</button>
+        <button class="dw-sort-btn" onclick="dwExpandAll(true)">▾ Expand All</button>
+        <button class="dw-sort-btn" onclick="dwExpandAll(false)">▸ Collapse All</button>
+        <button class="refresh-btn" onclick="openCliDateWise()" style="border-color:#9b59b6;color:#c77dff;">👤 CLI DATE WISE</button>
+        <button class="refresh-btn" onclick="dwGeneratePDF()" style="border-color:var(--signal-green);color:var(--signal-green);">📄 Generate PDF Report</button>
+        <button class="refresh-btn" onclick="dwExportExcel()" style="border-color:#2ecc71;color:#2ecc71;">📊 Export Excel</button>
+      </div>
+    </div>
+
+    <div class="dw-summary-strip">
+      <div class="dw-sum-card neutral">
+        <div class="dw-sum-label">Total Dates</div>
+        <div class="dw-sum-value" id="dwSumDates">—</div>
+      </div>
+      <div class="dw-sum-card">
+        <div class="dw-sum-label">Total Entries</div>
+        <div class="dw-sum-value" id="dwSumTotal">—</div>
+      </div>
+      <div class="dw-sum-card rs">
+        <div class="dw-sum-label">RS Practice</div>
+        <div class="dw-sum-value" id="dwSumRs">—</div>
+      </div>
+      <div class="dw-sum-card ds">
+        <div class="dw-sum-label">Approaching Danger</div>
+        <div class="dw-sum-value" id="dwSumDs">—</div>
+      </div>
+    </div>
+
+    <div class="section-head" style="display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap;">
+      <h2 style="font-size:14px;letter-spacing:2px;margin:0;color:#ff9f43;text-transform:uppercase;">📅 Date Wise Entries</h2>
+      <span class="count-chip" id="dwChip">0 dates</span>
+      <span id="dwRangeHeading" style="font-family:'Courier New',monospace;font-size:12px;font-weight:700;color:#ff9f43;background:#2a1c0a;border:1px solid #ff9f4355;padding:4px 10px;border-radius:6px;">REPORT FROM ALL DATES</span>
+      <span style="font-size:11.5px;color:var(--muted);font-family:'Courier New',monospace;">Click any date to view its entries</span>
+    </div>
+
+    <div id="dwList"><div class="loading">Loading date wise data…</div></div>
+
+    <div class="footer-note" style="margin-top:26px;">DATE WISE DATA · RAIPUR DIVISION · RS PRACTICE + APPROACHING DANGER COUNSELLING</div>
+  </div><!-- end tabContentDateWise -->
+
+  <!-- ── CLI DATE WISE MODAL ── -->
+  <div id="cliDwModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:9999;overflow:auto;padding:30px 14px;animation:fadeInModal .18s ease;" onclick="if(event.target===this)closeCliDateWise()">
+    <div class="pending-modal-box" style="max-width:1050px;">
+      <div class="pending-modal-header">
+        <div>
+          <div class="pending-modal-title" style="color:#c77dff;">👤 CLI DATE WISE ENTRIES</div>
+          <div class="clidw-headline" id="cliDwHeadLine">REPORT FROM —</div>
+          <div class="pending-modal-meta" id="cliDwMeta">—</div>
+        </div>
+        <button class="pending-modal-close" onclick="closeCliDateWise()">✕ Close</button>
+      </div>
+
+      <div class="clidw-toolbar">
+        <input type="text" class="hq-search" id="cliDwSearch" placeholder="🔍  Search CLI name or date…" oninput="buildCliDateWise()" style="flex:1;min-width:180px;max-width:320px;">
+        <span class="clidw-chip" id="cliDwChipCli">CLI: <b>0</b></span>
+        <span class="clidw-chip" id="cliDwChipDates">DATES: <b>0</b></span>
+        <span class="clidw-chip" id="cliDwChipEntries">ENTRIES: <b>0</b></span>
+        <button class="dw-sort-btn" onclick="cliDwExpandAll(true)">▾ Expand All</button>
+        <button class="dw-sort-btn" onclick="cliDwExpandAll(false)">▸ Collapse All</button>
+        <button class="hq-pdf-btn" onclick="cliDwGeneratePDF()">📄 PDF</button>
+        <button class="hq-pdf-btn" style="background:#1a3a2a;border-color:#2ecc71;color:#2ecc71;" onclick="cliDwExportExcel()">📊 Excel</button>
+      </div>
+
+      <div class="pending-modal-body" style="padding:0;max-height:70vh;overflow-y:auto;" id="cliDwList"></div>
+
+      <div class="pending-modal-footer" id="cliDwFooter">Entries are grouped by CLI name, then by date in ascending order.</div>
+    </div>
+  </div>
 
 <!-- ── HQ Pending Crew Modal ── -->
 <div id="pendingModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.82);z-index:9999;overflow:auto;padding:30px 16px;animation:fadeInModal .18s ease;" onclick="if(event.target===this)closePendingModal()">
@@ -1790,78 +1968,14 @@ function applyFilters() {
   const fromDateStr = fromVal || null;
   const toDateStr   = toVal   || null;
 
-  // Helper: find date/timestamp column in a sheet's cols array
-  function findDateCol(cols) {
-    if (!cols) return null;
-    // Prefer "Timestamp" column first (Google Forms default)
-    const tsCol = cols.find(c => /timestamp/i.test(c));
-    if (tsCol) return tsCol;
-    // Fall back to any "date" column (excluding "update")
-    return cols.find(c => /date/i.test(c) && !/update/i.test(c)) || null;
-  }
-
-  // Helper: extract YYYY-MM-DD string from any date/timestamp value
-  // Uses LOCAL date parts (getFullYear/Month/Date) to avoid UTC offset shifting the day
-  // This is critical for IST (UTC+5:30) — timestamps like "24 Jun 2026 00:30 IST"
-  // would shift to 23 Jun in UTC, causing them to be wrongly excluded.
-  function extractDateStr(v) {
-    if (v === null || v === undefined || v === '') return null;
-
-    // Google Sheets serial number
-    if (typeof v === 'number') {
-      const d = new Date(Date.UTC(1899, 11, 30) + v * 86400000);
-      if (isNaN(d.getTime())) return null;
-      const yyyy = d.getUTCFullYear();
-      const mm   = String(d.getUTCMonth() + 1).padStart(2, '0');
-      const dd   = String(d.getUTCDate()).padStart(2, '0');
-      return `${yyyy}-${mm}-${dd}`;
-    }
-
-    const s = String(v).trim();
-    if (!s) return null;
-
-    // Already YYYY-MM-DD (with optional time) — take date part only
-    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
-
-    // DD/MM/YYYY or DD-MM-YYYY (Indian format, with optional time like "24/06/2026 10:13:19")
-    // Regex anchors on date part only — time component is intentionally ignored
-    const dmyMatch = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
-    if (dmyMatch) {
-      const dd = dmyMatch[1].padStart(2, '0');
-      const mm = dmyMatch[2].padStart(2, '0');
-      return `${dmyMatch[3]}-${mm}-${dd}`;
-    }
-
-    // For any string containing a space (possible datetime), strip time before parsing
-    // e.g. "June 24, 2026 10:13:19" → parse "June 24, 2026" only → avoids UTC offset risk
-    const dateOnlyStr = s.includes(' ') ? s.split(' ')[0] : s;
-
-    // Any other parseable string — use LOCAL date parts to stay in IST
-    const d = new Date(dateOnlyStr);
-    if (!isNaN(d.getTime())) {
-      const yyyy = d.getFullYear();
-      const mm   = String(d.getMonth() + 1).padStart(2, '0');
-      const dd   = String(d.getDate()).padStart(2, '0');
-      return `${yyyy}-${mm}-${dd}`;
-    }
-
-    // Last resort: try full string
-    const d2 = new Date(s);
-    if (!isNaN(d2.getTime())) {
-      const yyyy = d2.getFullYear();
-      const mm   = String(d2.getMonth() + 1).padStart(2, '0');
-      const dd   = String(d2.getDate()).padStart(2, '0');
-      return `${yyyy}-${mm}-${dd}`;
-    }
-
-    return null;
-  }
-
-  // Helper: filter rows by date range — pure YYYY-MM-DD string comparison, zero timezone risk
-  function filterByDate(rows, cols, dateCol) {
-    if (!dateCol || (!fromDateStr && !toDateStr)) return rows;
+  // Helper: filter rows by date range — pure YYYY-MM-DD string comparison, zero timezone risk.
+  // The row's date comes from the shared rowDateInfo() helper (see below), which
+  // uses the sheet's DATE column first, falls back to the timestamp column, and
+  // corrects day/month-swapped values returned by the Apps Script.
+  function filterByDate(rows, sheetKey) {
+    if (!fromDateStr && !toDateStr) return rows;
     return rows.filter(row => {
-      const rowDateStr = extractDateStr(row[dateCol]);
+      const rowDateStr = rowDateInfo(sheetKey, row).key;
       if (!rowDateStr) return false;
       if (fromDateStr && rowDateStr < fromDateStr) return false;
       if (toDateStr   && rowDateStr > toDateStr)   return false;
@@ -1903,7 +2017,7 @@ function applyFilters() {
     const dsIdCols = [RESOLVED.ds.id].filter(Boolean);
     let filteredRows = filterRows(cache.ds.rows, cache.ds.cols, dsCols, personVal, dsIdCols, personId);
     if (cliVal && RESOLVED.ds.cli) filteredRows = filterRows(filteredRows, cache.ds.cols, [RESOLVED.ds.cli], cliVal);
-    filteredRows = filterByDate(filteredRows, cache.ds.cols, findDateCol(cache.ds.cols));
+    filteredRows = filterByDate(filteredRows, 'ds');
     dsFiltered = { cols: cache.ds.cols, rows: filteredRows };
     const hlCols = [...dsCols, ...(cliVal && RESOLVED.ds.cli ? [RESOLVED.ds.cli] : [])];
     renderTable('dsTableWrap', dsFiltered, hlCols, personVal || cliVal);
@@ -1948,7 +2062,7 @@ function applyFilters() {
     const rsIdCols = [RESOLVED.rs.alpId, RESOLVED.rs.lpId, RESOLVED.rs.genId].filter(Boolean);
     let filteredRows = filterRows(cache.rs.rows, cache.rs.cols, rsCols, personVal, rsIdCols, personId);
     if (cliVal && RESOLVED.rs.cli) filteredRows = filterRows(filteredRows, cache.rs.cols, [RESOLVED.rs.cli], cliVal);
-    filteredRows = filterByDate(filteredRows, cache.rs.cols, findDateCol(cache.rs.cols));
+    filteredRows = filterByDate(filteredRows, 'rs');
     // LP HQ / ALP HQ multi-select filters (Dashboard tab)
     if (dashLpHqFilter.size && RESOLVED.rs.lpHq) {
       filteredRows = filteredRows.filter(row => dashLpHqFilter.has((row[RESOLVED.rs.lpHq] || '').trim().toUpperCase()));
@@ -2458,6 +2572,7 @@ async function loadAll() {
   document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString('en-IN');
 
   resolveColumns();
+  refreshDateParsing();          // detect day/month-swapped date columns (see SHEET_SWAP)
   buildNameDropdown();
   buildCliDropdown();
   populateDashHqOptions();
@@ -2470,6 +2585,8 @@ async function loadAll() {
   // Rebuild LP/ALP report if that tab is currently visible
   if (document.getElementById('tabContentLpReport').classList.contains('active')) { populateLpHqOptions(); buildLpReport(); }
   if (document.getElementById('tabContentHqReport').classList.contains('active')) buildHqSummaryTable(hqAllCrew);
+  // Rebuild Date Wise tab if currently visible
+  if (document.getElementById('tabContentDateWise').classList.contains('active')) buildDateWise();
 
   if (errors.length) {
     setStatus('err', 'Error loading data');
@@ -2481,17 +2598,881 @@ async function loadAll() {
   }
 }
 
+// ══════════════════════════════════════════════════════════════
+// SHEET DATE NORMALISATION  (fixes dates swapped by the Apps Script)
+//
+// The web app converts DD/MM text dates through JavaScript's US date parser,
+// so a sheet cell reading “04/10/2026” comes back as “Fri Apr 10 2026”.
+// The apps simply reads that as 10 April and 4 October entries disappear.
+// We detect columns where this happened (nearly every serialized date has a
+// day ≤ 12 while the column also stores DD/MM text) and swap month/day back
+// to whatever the sheet actually shows.
+// ══════════════════════════════════════════════════════════════
+const SHEET_MONTHS = { jan:1, feb:2, mar:3, apr:4, may:5, jun:6, jul:7, aug:8, sep:9, oct:10, nov:11, dec:12 };
+let SHEET_SWAP = { rs: {}, ds: {} };   // sheet -> { columnName : true/false }
+
+function pad2(n) { return String(n).padStart(2, '0'); }
+
+// Decide, per date-ish column, whether its serialized dates were day/month swapped
+function detectSwappedDateCols(cols, rows) {
+  const out = {};
+  (cols || []).forEach(col => {
+    if (!/date|time\s*stamp|timestamp/i.test(col) || /update/i.test(col)) return;
+    let serial = 0, smallDay = 0, dmyText = 0;
+    (rows || []).forEach(r => {
+      const s = String(r[col] == null ? '' : r[col]).trim();
+      if (!s) return;
+      const m = s.match(/^[A-Za-z]{3} ([A-Za-z]{3}) (\d{1,2}) (\d{4})/);
+      if (m) {
+        serial++;
+        if (+m[2] <= 12) smallDay++;
+      } else if (/^\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{4}/.test(s)) {
+        dmyText++;
+      }
+    });
+    // Swapped when the column mixes DD/MM text with serialized dates whose day
+    // never exceeds 12 (because the day became the month number).
+    out[col] = serial >= 20 && dmyText > 0 && (smallDay / serial) >= 0.9;
+  });
+  return out;
+}
+
+function refreshDateParsing() {
+  SHEET_SWAP = {
+    rs: cache.rs ? detectSwappedDateCols(cache.rs.cols, cache.rs.rows) : {},
+    ds: cache.ds ? detectSwappedDateCols(cache.ds.cols, cache.ds.rows) : {}
+  };
+}
+
+// Convert one raw cell into a YYYY-MM-DD key.
+// swap=true applies the day/month correction to serialized JS date strings.
+function sheetDateKeyFromValue(v, swap) {
+  if (v === null || v === undefined || v === '') return null;
+
+  if (typeof v === 'number') {
+    const d = new Date(Date.UTC(1899, 11, 30) + v * 86400000);
+    if (isNaN(d.getTime())) return null;
+    return `${d.getUTCFullYear()}-${pad2(d.getUTCMonth()+1)}-${pad2(d.getUTCDate())}`;
+  }
+
+  const s = String(v).trim();
+  if (!s) return null;
+
+  // Serialized JS date: "Fri Apr 10 2026 11:06:09 GMT+0530 (...)"
+  const js = s.match(/^[A-Za-z]{3} ([A-Za-z]{3}) (\d{1,2}) (\d{4})/);
+  if (js) {
+    const M = SHEET_MONTHS[js[1].toLowerCase()];
+    const D = parseInt(js[2], 10);
+    const Y = js[3];
+    if (!M) return null;
+    if (swap && D <= 12) return `${Y}-${pad2(D)}-${pad2(M)}`;  // day/month restored
+    return `${Y}-${pad2(M)}-${pad2(D)}`;
+  }
+
+  // Already YYYY-MM-DD (with optional time)
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+
+  // DD/MM/YYYY, DD-MM-YYYY or DD.MM.YYYY (with optional time)
+  const dmy = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})/);
+  if (dmy) {
+    let dd = parseInt(dmy[1], 10), mm = parseInt(dmy[2], 10);
+    if (dd > 12 && mm <= 12) { /* already DD/MM */ }
+    return `${dmy[3]}-${pad2(mm)}-${pad2(dd)}`;
+  }
+
+  // Any other parseable string (e.g. "June 24, 2026 10:13:19") — strip the time
+  const dateOnly = s.includes(' ') ? s.split(' ')[0] : s;
+  let d = new Date(dateOnly);
+  if (isNaN(d.getTime())) d = new Date(s);
+  if (isNaN(d.getTime())) return null;
+  return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+}
+
+// All date-carrying columns for a sheet, TIMESTAMP first (the auto-recorded
+// event time the sheet lists in column A), then the DATE field as fallback for
+// rows where the timestamp cell is blank.
+function dwDateColumns(cols) {
+  if (!cols) return [];
+  const tsCol   = cols.find(c => /time\s*stamp|timestamp/i.test(c)) || null;
+  const dateCol = cols.find(c => /date/i.test(c) && !/update/i.test(c)) || null;
+  return [tsCol, dateCol].filter((c, i, a) => c && a.indexOf(c) === i);
+}
+
+// Resolve a row's date: { key, col }. Uses the first column that yields a date.
+function rowDateInfo(sheet, row) {
+  const data = cache[sheet];
+  if (!data) return { key: null, col: null };
+  const swapMap = SHEET_SWAP[sheet] || {};
+  for (const col of dwDateColumns(data.cols)) {
+    const key = sheetDateKeyFromValue(row[col], !!swapMap[col]);
+    if (key) return { key, col };
+  }
+  return { key: null, col: null };
+}
+
 // ── Tab switching ──
+// ══════════════════════════════════════════════════════════════
+// DATE WISE DATA TAB
+// Groups every record of the selected sheet(s) by its date and shows
+// "DD.MM.YYYY - COUNT" rows. Clicking a date expands its full entries.
+// ══════════════════════════════════════════════════════════════
+let dwSortDesc   = true;          // newest date first
+let dwOpenDates  = new Set();     // date keys currently expanded
+let dwActiveRange = 'all';        // today | 7d | 30d | month | all
+let dwLastGroups = [];            // last rendered groups (for expand-all / export)
+
+// Kept for compatibility — plain parse, without the swap correction.
+function dwExtractDateStr(v) {
+  return sheetDateKeyFromValue(v, false);
+}
+
+// Extract HH:MM (24h) from a timestamp value, if it carries a time
+function dwExtractTime(v) {
+  if (v === null || v === undefined || v === '') return '';
+
+  // Google Sheets serial: fractional part is the time of day
+  if (typeof v === 'number') {
+    const frac = v - Math.floor(v);
+    if (frac <= 0) return '';
+    const totalMin = Math.round(frac * 1440);
+    return String(Math.floor(totalMin / 60) % 24).padStart(2,'0') + ':' + String(totalMin % 60).padStart(2,'0');
+  }
+
+  const s = String(v).trim();
+  // Date-only values carry no time — don't invent 00:00
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return '';
+  if (/^\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{4}$/.test(s)) return '';
+
+  const m = s.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)?/i);
+  if (m) {
+    let hh = parseInt(m[1], 10);
+    const mi = m[2];
+    const ap = m[4] ? m[4].toUpperCase() : null;
+    if (ap === 'PM' && hh < 12) hh += 12;
+    if (ap === 'AM' && hh === 12) hh = 0;
+    return String(hh).padStart(2,'0') + ':' + mi;
+  }
+  if (/^\d{4}-\d{2}-\d{2}T/.test(s)) {
+    const d = new Date(s);
+    if (!isNaN(d.getTime())) {
+      return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+    }
+  }
+  return '';
+}
+
+// Normalise one raw row into the shared date-wise model
+function dwModel(sheet, row, cols) {
+  const info = rowDateInfo(sheet, row);
+  const dateKey = info.key;
+  if (!dateKey) return null;
+
+  // Prefer the time carried by the date column that produced the key; fall back
+  // to the timestamp column (e.g. when DATE has no time but TIME STAMP does).
+  let time = dwExtractTime(row[info.col]);
+  if (!time) {
+    const tsCol = (cols || []).find(c => /time\s*stamp|timestamp/i.test(c));
+    if (tsCol && tsCol !== info.col) time = dwExtractTime(row[tsCol]);
+  }
+
+  const c = sheet === 'rs' ? RESOLVED.rs : RESOLVED.ds;
+  const g = (...names) => {
+    for (const n of names) {
+      const v = n ? (row[n] || '').trim() : '';
+      if (v) return v;
+    }
+    return '';
+  };
+
+  if (sheet === 'rs') {
+    const ids = [c.alpId, c.lpId, c.genId].filter(Boolean).map(k => normId(row[k])).filter(Boolean);
+    return {
+      sheet: 'rs', sheetLabel: 'RS PRACTICE', dateKey,
+      time,
+      cli: g(c.cli),
+      lp: g(c.lp),
+      alp: g(c.alp),
+      hq: g(c.alpHq, c.lpHq, c.hq),
+      id: ids[0] || '',
+      raw: row
+    };
+  }
+  return {
+    sheet: 'ds', sheetLabel: 'DANGER COUNSELLING', dateKey,
+    time,
+    cli: g(c.cli),
+    lp: g(c.crew),
+    alp: '',
+    hq: g(c.hq),
+    id: normId(row[c.id]),
+    raw: row
+  };
+}
+
+// DD.MM.YYYY display (as requested: 01.10.2026 - 12)
+function dwFmtDate(key) {
+  if (!key) return '—';
+  const [y, m, d] = key.split('-');
+  return `${d}.${m}.${y}`;
+}
+
+function dwQuickRange(kind) {
+  // Anchor ranges on the LATEST date present in the data (not system clock),
+  // so "last 7 days" always makes sense for a historical sheet.
+  const allDates = dwAllDates();
+  const maxKey = allDates.length ? allDates[allDates.length - 1] : null;
+  dwActiveRange = kind;
+  dwSetRangeActive(kind);
+
+  const from = document.getElementById('dwFromDate');
+  const to   = document.getElementById('dwToDate');
+  if (kind === 'all' || !maxKey) { from.value = ''; to.value = ''; buildDateWise(); return; }
+
+  const base = new Date(maxKey + 'T00:00:00');
+  const shift = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+  const toKey = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+
+  let start = base;
+  if (kind === '7d')  start = shift(base, -6);
+  if (kind === '30d') start = shift(base, -29);
+  if (kind === 'month') start = new Date(base.getFullYear(), base.getMonth(), 1);
+
+  from.value = toKey(start);
+  to.value   = toKey(base);
+  buildDateWise();
+}
+
+function dwSetRangeActive(kind) {
+  document.querySelectorAll('.dw-range-chip').forEach(b => {
+    b.classList.toggle('active', kind && b.dataset.range === kind);
+  });
+}
+
+function dwAllDates() {
+  const set = new Set();
+  ['rs', 'ds'].forEach(sh => {
+    const data = cache[sh];
+    if (!data) return;
+    data.rows.forEach(r => { const k = rowDateInfo(sh, r).key; if (k) set.add(k); });
+  });
+  return [...set].sort();
+}
+
+function dwToggleSort() {
+  dwSortDesc = !dwSortDesc;
+  const btn = document.getElementById('dwSortBtn');
+  if (btn) btn.textContent = dwSortDesc ? '⇅ Newest First' : '⇅ Oldest First';
+  buildDateWise();
+}
+
+function dwToggleDate(key) {
+  if (dwOpenDates.has(key)) dwOpenDates.delete(key); else dwOpenDates.add(key);
+  const card = document.getElementById('dwCard_' + key);
+  if (card) card.classList.toggle('open', dwOpenDates.has(key));
+}
+
+function dwExpandAll(open) {
+  dwOpenDates.clear();
+  if (open) dwLastGroups.forEach(g => dwOpenDates.add(g.dateKey));
+  document.querySelectorAll('.dw-date-card').forEach(card => {
+    const key = card.dataset.date;
+    card.classList.toggle('open', dwOpenDates.has(key));
+  });
+}
+
+// Collect all date-wise records honouring the tab's current date range,
+// sheet selector and search box. Shared by the list, the PDF and CLI views.
+function dwCollect() {
+  const sheetSel = (document.getElementById('dwSheetSelector') || {}).value || 'both';
+  const q = ((document.getElementById('dwSearch') || {}).value || '').trim().toLowerCase();
+  const fromVal = (document.getElementById('dwFromDate') || {}).value || '';
+  const toVal   = (document.getElementById('dwToDate')   || {}).value || '';
+
+  const groups = new Map();
+  const models = [];
+  const addRows = (sh) => {
+    const data = cache[sh];
+    if (!data) return;
+    data.rows.forEach(row => {
+      const m = dwModel(sh, row, data.cols);
+      if (!m) return;
+      if (fromVal && m.dateKey < fromVal) return;
+      if (toVal   && m.dateKey > toVal)   return;
+      if (q) {
+        const hay = [m.cli, m.lp, m.alp, m.hq, m.id, m.sheetLabel].join(' ').toLowerCase();
+        if (!hay.includes(q)) return;
+      }
+      models.push(m);
+      if (!groups.has(m.dateKey)) groups.set(m.dateKey, { dateKey: m.dateKey, rs: [], ds: [] });
+      groups.get(m.dateKey)[m.sheet].push(m);
+    });
+  };
+  if (sheetSel === 'both' || sheetSel === 'rs') addRows('rs');
+  if (sheetSel === 'both' || sheetSel === 'ds') addRows('ds');
+
+  const list = [...groups.values()];
+  list.forEach(g => {
+    g.rs.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+    g.ds.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+    g.total = g.rs.length + g.ds.length;
+  });
+  return { list, models, sheetSel, fromVal, toVal, q };
+}
+
+function dwSheetLabel(sheetSel) {
+  if (sheetSel === 'rs') return 'RS PRACTICE';
+  if (sheetSel === 'ds') return 'APPROACHING DANGER COUNSELLING';
+  return 'RS PRACTICE + APPROACHING DANGER COUNSELLING';
+}
+
+function buildDateWise() {
+  const list = document.getElementById('dwList');
+  if (!list) return;
+
+  if (!cache.ds && !cache.rs) {
+    list.innerHTML = '<div class="dw-empty">No data loaded yet. Please wait for the dashboard to finish loading, then open this tab again.</div>';
+    return;
+  }
+
+  const collected = dwCollect();
+  const sheetSel = collected.sheetSel;
+  const fromVal = collected.fromVal;
+  const toVal   = collected.toVal;
+  const q       = collected.q;
+
+  // Range badge + heading
+  const rangeHead = document.getElementById('dwRangeHeading');
+  if (rangeHead) rangeHead.textContent = dwRangeHeading(fromVal, toVal);
+  const badge = document.getElementById('dwRangeBadge');
+  if (badge) {
+    if (fromVal || toVal) {
+      badge.textContent = (fromVal ? dwFmtDate(fromVal) : '…') + ' → ' + (toVal ? dwFmtDate(toVal) : '…');
+      badge.classList.add('show');
+    } else {
+      badge.classList.remove('show');
+    }
+  }
+
+  let gs = collected.list.slice();
+  gs.sort((a, b) => dwSortDesc ? b.dateKey.localeCompare(a.dateKey) : a.dateKey.localeCompare(b.dateKey));
+  dwLastGroups = gs;
+
+  // Summary strip
+  const totRs = gs.reduce((s, g) => s + g.rs.length, 0);
+  const totDs = gs.reduce((s, g) => s + g.ds.length, 0);
+  document.getElementById('dwSumDates').textContent = gs.length;
+  document.getElementById('dwSumTotal').textContent = totRs + totDs;
+  document.getElementById('dwSumRs').textContent = totRs;
+  document.getElementById('dwSumDs').textContent = totDs;
+  document.getElementById('dwChip').textContent = gs.length + (gs.length === 1 ? ' date' : ' dates');
+
+  if (!gs.length) {
+    const noDateCol = ['rs','ds'].filter(sh => cache[sh] && !dwDateColumns(cache[sh].cols).length);
+    if (noDateCol.length === (sheetSel === 'both' ? 2 : 1) && !fromVal && !toVal && !q) {
+      list.innerHTML = '<div class="dw-empty">⚠ No date / timestamp column could be detected in the selected sheet.<br><span style="font-size:11.5px;">Expected a column like “Timestamp” or “… Date”.</span></div>';
+    } else {
+      list.innerHTML = '<div class="dw-empty">No entries found for the selected date range / sheet.<br><span style="font-size:11.5px;">Try clearing the search box or widening the date range.</span></div>';
+    }
+    return;
+  }
+
+  list.innerHTML = gs.map(g => {
+    const isOpen = dwOpenDates.has(g.dateKey);
+    const chips = [
+      g.rs.length ? `<span class="dw-mini rs">RS ${g.rs.length}</span>` : '',
+      g.ds.length ? `<span class="dw-mini ds">DANGER ${g.ds.length}</span>` : ''
+    ].join('');
+    const rows = [...g.rs, ...g.ds];
+    const body = rows.map((m, i) => `
+      <tr>
+        <td style="color:var(--muted);font-family:'Courier New',monospace;">${i+1}</td>
+        <td><span class="dw-sheet-tag ${m.sheet}">${m.sheet === 'rs' ? 'RS PRACTICE' : 'DANGER'}</span></td>
+        <td style="font-family:'Courier New',monospace;color:#9fd3ff;">${esc(m.time || '—')}</td>
+        <td>${esc(m.cli || '—')}</td>
+        <td style="font-weight:600;">${esc(m.lp || '—')}</td>
+        <td>${esc(m.alp || '—')}</td>
+        <td>${esc(m.hq || '—')}</td>
+        <td style="font-family:'Courier New',monospace;color:var(--muted);">${esc(m.id || '—')}</td>
+      </tr>`).join('');
+
+    return `
+    <div class="dw-date-card${isOpen ? ' open' : ''}" id="dwCard_${g.dateKey}" data-date="${g.dateKey}">
+      <div class="dw-date-head" onclick="dwToggleDate('${g.dateKey}')">
+        <span class="dw-date-label">${dwFmtDate(g.dateKey)}<span class="dash"> - </span><span class="cnt">${g.total}</span></span>
+        <span class="dw-mini-chips">${chips}</span>
+        <span class="dw-toggle">❯</span>
+      </div>
+      <div class="dw-date-body">
+        <div class="table-scroll">
+          <table>
+            <thead><tr>
+              <th style="width:44px;">#</th>
+              <th style="width:150px;">SHEET</th>
+              <th style="width:70px;">TIME</th>
+              <th>CLI NAME</th>
+              <th>LP / CREW NAME</th>
+              <th>ALP NAME</th>
+              <th>HQ</th>
+              <th>ID</th>
+            </tr></thead>
+            <tbody>${body}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function dwExportExcel() {
+  if (typeof XLSX === 'undefined') { alert('Excel library not loaded yet — please try again.'); return; }
+  if (!dwLastGroups.length) { alert('No date-wise data to export for the current filters.'); return; }
+
+  const summary = dwLastGroups.map(g => ({
+    'DATE': dwFmtDate(g.dateKey),
+    'RS PRACTICE': g.rs.length,
+    'APPROACHING DANGER': g.ds.length,
+    'TOTAL': g.total
+  }));
+  summary.push({
+    'DATE': 'TOTAL',
+    'RS PRACTICE': dwLastGroups.reduce((s,g)=>s+g.rs.length,0),
+    'APPROACHING DANGER': dwLastGroups.reduce((s,g)=>s+g.ds.length,0),
+    'TOTAL': dwLastGroups.reduce((s,g)=>s+g.total,0)
+  });
+
+  const details = [];
+  dwLastGroups.forEach(g => {
+    [...g.rs, ...g.ds].forEach((m, i) => details.push({
+      'DATE': dwFmtDate(g.dateKey),
+      'S.NO': i + 1,
+      'SHEET': m.sheetLabel,
+      'TIME': m.time,
+      'CLI NAME': m.cli,
+      'LP / CREW NAME': m.lp,
+      'ALP NAME': m.alp,
+      'HQ': m.hq,
+      'ID': m.id
+    }));
+  });
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summary), 'Date Wise Summary');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(details), 'Date Wise Entries');
+  XLSX.writeFile(wb, 'Date_Wise_Data_' + new Date().toISOString().slice(0, 10) + '.xlsx');
+}
+
+// ── Date-wise PDF report — ALWAYS in ASCENDING order of date ──
+function dwGeneratePDF() {
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    alert('PDF library failed to load. Please check your internet connection and try again.');
+    return;
+  }
+  const collected = dwCollect();
+  const gs = collected.list.slice().sort((a, b) => a.dateKey.localeCompare(b.dateKey));
+  if (!gs.length) { alert('No date-wise data to export for the current filters.'); return; }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+  doc.setTextColor(0, 0, 0);
+  const pageWidth = doc.internal.pageSize.getWidth();
+  let y = 26;
+
+  const totRs = gs.reduce((s, g) => s + g.rs.length, 0);
+  const totDs = gs.reduce((s, g) => s + g.ds.length, 0);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.text('DATE WISE DATA REPORT', pageWidth / 2, y, { align: 'center' });
+  y += 13;
+  doc.setFontSize(8);
+  doc.text('RAIPUR DIVISION · CREW SAFETY COUNSELLING · ' + dwSheetLabel(collected.sheetSel), pageWidth / 2, y, { align: 'center' });
+  y += 12;
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9.5);
+  doc.text(dwRangeHeading(collected.fromVal, collected.toVal), pageWidth / 2, y, { align: 'center' });
+  y += 13;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
+  const ctx = ['Generated: ' + new Date().toLocaleString('en-IN')];
+  if (collected.q) ctx.push('Search: ' + collected.q);
+  doc.text(ctx.join('   |   '), 20, y);
+  y += 12;
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  doc.text('Total Dates: ' + gs.length + '    |    RS Practice: ' + totRs +
+           '    |    Approaching Danger: ' + totDs + '    |    Total Entries: ' + (totRs + totDs) +
+           '    |    Date Order: ASCENDING', 20, y);
+  y += 14;
+
+  const tableOpts = {
+    styles: { fontSize: 7, cellPadding: 2, textColor: [0, 0, 0] },
+    headStyles: { fillColor: [225, 225, 225], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 7 },
+    margin: { left: 20, right: 20 },
+    theme: 'grid'
+  };
+
+  // 1. Date summary — ascending
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9.5);
+  doc.text('1. DATE WISE SUMMARY (ASCENDING)', 20, y);
+  y += 4;
+
+  const sumBody = gs.map(g => [dwFmtDate(g.dateKey), String(g.rs.length), String(g.ds.length), String(g.total)]);
+  sumBody.push(['TOTAL', String(totRs), String(totDs), String(totRs + totDs)]);
+  doc.autoTable(Object.assign({}, tableOpts, {
+    startY: y,
+    head: [['DATE', 'RS PRACTICE', 'APPROACHING DANGER', 'TOTAL']],
+    body: sumBody,
+    columnStyles: { 0: { cellWidth: 110 }, 1: { halign: 'center' }, 2: { halign: 'center' }, 3: { halign: 'center', fontStyle: 'bold' } }
+  }));
+  y = doc.lastAutoTable.finalY + 14;
+
+  // 2. Full entry details — ascending date, then time
+  if (y > doc.internal.pageSize.getHeight() - 60) { doc.addPage(); y = 30; }
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9.5);
+  doc.text('2. ENTRY DETAILS — DATE WISE (ASCENDING)', 20, y);
+  y += 4;
+
+  const detailBody = [];
+  gs.forEach(g => {
+    [...g.rs, ...g.ds].forEach(m => detailBody.push([
+      dwFmtDate(g.dateKey),
+      m.sheet === 'rs' ? 'RS PRACTICE' : 'DANGER',
+      m.time || '-',
+      m.cli || '-',
+      m.lp || '-',
+      m.alp || '-',
+      m.hq || '-',
+      m.id || '-'
+    ]));
+  });
+  doc.autoTable(Object.assign({}, tableOpts, {
+    startY: y,
+    head: [['DATE', 'SHEET', 'TIME', 'CLI NAME', 'LP / CREW NAME', 'ALP NAME', 'HQ', 'ID']],
+    body: detailBody,
+    didDrawPage: () => {
+      const ph = doc.internal.pageSize.getHeight();
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(6.5);
+      doc.text('Date Wise Data Report · RAIPUR DIVISION', 20, ph - 12);
+      doc.text('Page ' + doc.internal.getNumberOfPages(), doc.internal.pageSize.getWidth() - 20, ph - 12, { align: 'right' });
+    }
+  }));
+
+  const rangePart = (collected.fromVal || collected.toVal)
+    ? '_' + (collected.fromVal ? dwFmtDate(collected.fromVal).replace(/\./g, '-') : 'START') +
+      '_to_' + (collected.toVal ? dwFmtDate(collected.toVal).replace(/\./g, '-') : 'END')
+    : '_AllDates';
+  doc.save('Date_Wise_Report' + rangePart + '_' + new Date().toISOString().slice(0, 10) + '.pdf');
+}
+
+// ══════════════════════════════════════════════════════════════
+// CLI DATE WISE VIEW
+// Groups the same filtered records by CLI name, then by date:
+//   AMIT KUMAR BANKURE   01.10.2026 - 1
+// ══════════════════════════════════════════════════════════════
+let cliDwGroups     = [];
+let cliDwOpenCli    = new Set();
+let cliDwOpenDate   = new Set();
+let cliDwRange      = { fromVal: '', toVal: '', sheetSel: 'both' };
+
+function openCliDateWise() {
+  if (!cache.ds && !cache.rs) {
+    alert('No data loaded yet. Please wait for the dashboard to finish loading, then try again.');
+    return;
+  }
+  document.getElementById('cliDwModal').style.display = 'block';
+  buildCliDateWise();
+}
+function closeCliDateWise() {
+  document.getElementById('cliDwModal').style.display = 'none';
+}
+
+// "AMIT KUMAR BANKURE/CLI/BIA" → "AMIT KUMAR BANKURE"
+function cliBaseName(name) {
+  return String(name || '')
+    .replace(/\/\s*CLI\b.*$/i, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// Heading helper: "REPORT FROM 01.10.2026 TO 22.10.2026"
+function dwRangeHeading(fromVal, toVal) {
+  if (!fromVal && !toVal) return 'REPORT FROM ALL DATES';
+  return 'REPORT FROM ' + (fromVal ? dwFmtDate(fromVal) : 'BEGINNING') +
+         ' TO ' + (toVal ? dwFmtDate(toVal) : 'LATEST');
+}
+
+function cliDwBuildModel() {
+  const collected = dwCollect();
+  const q = ((document.getElementById('cliDwSearch') || {}).value || '').trim().toLowerCase();
+
+  const byCli = new Map();
+  collected.models.forEach(m => {
+    const base = cliBaseName(m.cli) || '(NO CLI NAME)';
+    if (q && !base.toLowerCase().includes(q) && !dwFmtDate(m.dateKey).includes(q)) return;
+    const key = base.toUpperCase();          // one row per CLI — never repeated
+    if (!byCli.has(key)) byCli.set(key, { name: base, entries: [] });
+    byCli.get(key).entries.push(m);
+  });
+
+  const groups = [...byCli.values()]
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map(g => {
+      const entries = g.entries;
+      entries.sort((a, b) => a.dateKey.localeCompare(b.dateKey) || (a.time || '').localeCompare(b.time || ''));
+      const byDate = new Map();
+      entries.forEach(m => {
+        if (!byDate.has(m.dateKey)) byDate.set(m.dateKey, { dateKey: m.dateKey, entries: [] });
+        byDate.get(m.dateKey).entries.push(m);
+      });
+      const dates = [...byDate.values()].sort((a, b) => a.dateKey.localeCompare(b.dateKey));
+      return { name: g.name, entries, dates, total: entries.length };
+    });
+
+  return { groups, sheetSel: collected.sheetSel, fromVal: collected.fromVal, toVal: collected.toVal };
+}
+
+function buildCliDateWise() {
+  const listEl = document.getElementById('cliDwList');
+  if (!listEl) return;
+
+  const built = cliDwBuildModel();
+  cliDwGroups = built.groups;
+  cliDwRange  = { fromVal: built.fromVal, toVal: built.toVal, sheetSel: built.sheetSel };
+
+  const totalEntries = cliDwGroups.reduce((s, g) => s + g.total, 0);
+  const dateSet = new Set();
+  cliDwGroups.forEach(g => g.dates.forEach(d => dateSet.add(d.dateKey)));
+
+  const meta = document.getElementById('cliDwMeta');
+  if (meta) {
+    meta.textContent = dwRangeHeading(built.fromVal, built.toVal) +
+      '  ·  ' + dwSheetLabel(built.sheetSel) +
+      '  ·  TOTAL CLI: ' + cliDwGroups.length +
+      '  ·  TOTAL ENTRIES: ' + totalEntries;
+  }
+  const headLine = document.getElementById('cliDwHeadLine');
+  if (headLine) {
+    headLine.textContent = dwRangeHeading(built.fromVal, built.toVal);
+  }
+  document.getElementById('cliDwChipCli').innerHTML     = 'CLI: <b>' + cliDwGroups.length + '</b>';
+  document.getElementById('cliDwChipDates').innerHTML   = 'DATES: <b>' + dateSet.size + '</b>';
+  document.getElementById('cliDwChipEntries').innerHTML = 'ENTRIES: <b>' + totalEntries + '</b>';
+
+  if (!cliDwGroups.length) {
+    listEl.innerHTML = '<div class="clidw-empty">No CLI entries found for the current filters.</div>';
+    return;
+  }
+
+  listEl.innerHTML = cliDwGroups.map((g, i) => {
+    const isOpen = cliDwOpenCli.has(i);
+    const dateRows = g.dates.map((d, j) => {
+      const dOpen = cliDwOpenDate.has(i + '_' + j);
+      const rsN = d.entries.filter(e => e.sheet === 'rs').length;
+      const dsN = d.entries.filter(e => e.sheet === 'ds').length;
+      const chips = [
+        rsN ? `<span class="dw-mini rs">RS ${rsN}</span>` : '',
+        dsN ? `<span class="dw-mini ds">DANGER ${dsN}</span>` : ''
+      ].join('');
+      const rows = d.entries.map((m, k) => `
+        <tr>
+          <td style="color:var(--muted);font-family:'Courier New',monospace;">${k+1}</td>
+          <td><span class="dw-sheet-tag ${m.sheet}">${m.sheet === 'rs' ? 'RS PRACTICE' : 'DANGER'}</span></td>
+          <td style="font-family:'Courier New',monospace;color:#9fd3ff;">${esc(m.time || '—')}</td>
+          <td>${esc(m.lp || '—')}</td>
+          <td>${esc(m.alp || '—')}</td>
+          <td>${esc(m.hq || '—')}</td>
+          <td style="font-family:'Courier New',monospace;color:var(--muted);">${esc(m.id || '—')}</td>
+        </tr>`).join('');
+
+      return `
+        <div class="clidw-date${dOpen ? ' open' : ''}" id="clidwDate_${i}_${j}" onclick="cliDwToggleDate(${i},${j})">
+          <span class="clidw-date-label">${dwFmtDate(d.dateKey)}<span style="color:var(--muted);margin:0 4px;"> - </span><span style="color:#fff;">${d.entries.length}</span></span>
+          <span class="dw-mini-chips">${chips}</span>
+          <span class="clidw-chev" style="margin-left:auto;">❯</span>
+        </div>
+        <div class="clidw-date-entries">
+          <table>
+            <thead><tr>
+              <th style="width:34px;">#</th><th style="width:120px;">SHEET</th><th style="width:60px;">TIME</th>
+              <th>LP / CREW NAME</th><th>ALP NAME</th><th>HQ</th><th>ID</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>`;
+    }).join('');
+
+    return `
+      <div class="clidw-card${isOpen ? ' open' : ''}" id="clidwCard_${i}">
+        <div class="clidw-head" onclick="cliDwToggleCli(${i})">
+          <span class="clidw-name">${esc(g.name)}</span>
+          <span class="clidw-total">- ${String(g.total).padStart(2, '0')}</span>
+          <span class="clidw-count">${g.dates.length} ${g.dates.length === 1 ? 'date' : 'dates'}</span>
+          <span class="clidw-chev">❯</span>
+        </div>
+        <div class="clidw-body">${dateRows}</div>
+      </div>`;
+  }).join('');
+}
+
+function cliDwToggleCli(i) {
+  const card = document.getElementById('clidwCard_' + i);
+  if (!card) return;
+  const open = card.classList.toggle('open');
+  if (open) cliDwOpenCli.add(i); else cliDwOpenCli.delete(i);
+}
+
+function cliDwToggleDate(i, j) {
+  const el = document.getElementById('clidwDate_' + i + '_' + j);
+  if (!el) return;
+  const open = el.classList.toggle('open');
+  const key = i + '_' + j;
+  if (open) cliDwOpenDate.add(key); else cliDwOpenDate.delete(key);
+}
+
+function cliDwExpandAll(open) {
+  cliDwOpenCli.clear();
+  cliDwOpenDate.clear();
+  if (open) {
+    cliDwGroups.forEach((g, i) => {
+      cliDwOpenCli.add(i);
+      g.dates.forEach((d, j) => cliDwOpenDate.add(i + '_' + j));
+    });
+  }
+  document.querySelectorAll('.clidw-card').forEach(el => el.classList.toggle('open', open));
+  document.querySelectorAll('.clidw-date').forEach(el => el.classList.toggle('open', open));
+}
+
+function cliDwGeneratePDF() {
+  if (!window.jspdf || !window.jspdf.jsPDF) { alert('PDF library failed to load.'); return; }
+  if (!cliDwGroups.length) { alert('No CLI data to export.'); return; }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+  doc.setTextColor(0, 0, 0);
+  const pageWidth = doc.internal.pageSize.getWidth();
+  let y = 26;
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.text('CLI DATE WISE REPORT', pageWidth / 2, y, { align: 'center' });
+  y += 15;
+  doc.setFontSize(9.5);
+  doc.text(dwRangeHeading(cliDwRange.fromVal, cliDwRange.toVal), pageWidth / 2, y, { align: 'center' });
+  y += 13;
+  doc.setFontSize(8);
+  doc.text('RAIPUR DIVISION · CREW SAFETY COUNSELLING · ' + dwSheetLabel(cliDwRange.sheetSel), pageWidth / 2, y, { align: 'center' });
+  y += 12;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
+  doc.text('Generated: ' + new Date().toLocaleString('en-IN'), 20, y);
+  y += 12;
+
+  const totalEntries = cliDwGroups.reduce((s, g) => s + g.total, 0);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  doc.text('TOTAL CLI: ' + cliDwGroups.length + '    |    TOTAL ENTRIES: ' + totalEntries + '    |    One row per CLI (name appears only once)', 20, y);
+  y += 14;
+
+  const tableOpts = {
+    styles: { fontSize: 7.5, cellPadding: 2, textColor: [0, 0, 0] },
+    headStyles: { fillColor: [225, 225, 225], textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 7.5 },
+    margin: { left: 20, right: 20 },
+    theme: 'grid'
+  };
+
+  // One row per CLI — the name is never repeated
+  const body = cliDwGroups.map(g => [
+    g.name,
+    String(g.dates.length),
+    g.dates.map(d => dwFmtDate(d.dateKey) + ' (' + d.entries.length + ')').join(', '),
+    String(g.total)
+  ]);
+  body.push(['TOTAL', String(new Set(cliDwGroups.flatMap(g => g.dates.map(d => d.dateKey))).size), '', String(totalEntries)]);
+
+  doc.autoTable(Object.assign({}, tableOpts, {
+    startY: y,
+    head: [['CLI NAME', 'NO. OF DATES', 'DATE WISE BREAKUP', 'TOTAL ENTRIES']],
+    body,
+    columnStyles: {
+      0: { cellWidth: 190 },
+      1: { cellWidth: 65, halign: 'center' },
+      3: { cellWidth: 70, halign: 'center', fontStyle: 'bold' }
+    },
+    didDrawPage: () => {
+      const ph = doc.internal.pageSize.getHeight();
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(6.5);
+      doc.text('CLI Date Wise Report · RAIPUR DIVISION', 20, ph - 12);
+      doc.text('Page ' + doc.internal.getNumberOfPages(), doc.internal.pageSize.getWidth() - 20, ph - 12, { align: 'right' });
+    }
+  }));
+
+  doc.save('CLI_Date_Wise_' + new Date().toISOString().slice(0, 10) + '.pdf');
+}
+
+function cliDwExportExcel() {
+  if (typeof XLSX === 'undefined') { alert('Excel library not loaded yet — please try again.'); return; }
+  if (!cliDwGroups.length) { alert('No CLI data to export.'); return; }
+
+  const totalEntries = cliDwGroups.reduce((s, g) => s + g.total, 0);
+
+  // ONE row per CLI — the name is never repeated across dates.
+  const summary = cliDwGroups.map(g => ({
+    'CLI NAME': g.name,
+    'NO. OF DATES': g.dates.length,
+    'DATE WISE BREAKUP': g.dates.map(d => dwFmtDate(d.dateKey) + ' (' + d.entries.length + ')').join(', '),
+    'TOTAL ENTRIES': g.total
+  }));
+  summary.push({
+    'CLI NAME': 'TOTAL (' + cliDwGroups.length + ' CLI)',
+    'NO. OF DATES': new Set(cliDwGroups.flatMap(g => g.dates.map(d => d.dateKey))).size,
+    'DATE WISE BREAKUP': '',
+    'TOTAL ENTRIES': totalEntries
+  });
+
+  // Full record detail (one row per entry) — kept on a separate sheet.
+  const details = [];
+  cliDwGroups.forEach(g => {
+    g.dates.forEach(d => {
+      d.entries.forEach((m, k) => details.push({
+        'CLI NAME': g.name,
+        'DATE': dwFmtDate(d.dateKey),
+        'S.NO': k + 1,
+        'SHEET': m.sheetLabel,
+        'TIME': m.time,
+        'LP / CREW NAME': m.lp,
+        'ALP NAME': m.alp,
+        'HQ': m.hq,
+        'ID': m.id
+      }));
+    });
+  });
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summary), 'CLI Wise Total');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(details), 'CLI Entry Details');
+  XLSX.writeFile(wb, 'CLI_Date_Wise_' + new Date().toISOString().slice(0, 10) + '.xlsx');
+}
+
 function switchTab(tab) {
   document.getElementById('tabContentDashboard').classList.toggle('active', tab === 'dashboard');
   document.getElementById('tabContentCliReport').classList.toggle('active', tab === 'cliReport');
   document.getElementById('tabContentLpReport').classList.toggle('active', tab === 'lpReport');
   document.getElementById('tabContentHqReport').classList.toggle('active', tab === 'hqReport');
+  document.getElementById('tabContentDateWise').classList.toggle('active', tab === 'dateWise');
   document.getElementById('tabDashboard').classList.toggle('active', tab === 'dashboard');
   document.getElementById('tabCliReport').classList.toggle('active', tab === 'cliReport');
   document.getElementById('tabLpReport').classList.toggle('active', tab === 'lpReport');
   document.getElementById('tabHqReport').classList.toggle('active', tab === 'hqReport');
+  document.getElementById('tabDateWise').classList.toggle('active', tab === 'dateWise');
   if (tab === 'cliReport') buildCliReport();
+  if (tab === 'dateWise')  buildDateWise();
   if (tab === 'lpReport')  {
     populateLpHqOptions();
     buildLpReport();
@@ -3155,197 +4136,29 @@ function hqSetStatus(state, msg) {
   t.textContent = msg;
 }
 
-const HQ_APPS_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbxIfH_Y2vqZsY9-qIk145JSIhQUYa9KbwxswMGG85M8sMj4v08JMmJndbm6HQUzG3qRpA/exec';
-const HQ_URL_KEY   = 'hqAppsUrlOverride_v1';
-const HQ_CACHE_KEY = 'hqRosterCache_v1';
-
-function hqAppsUrl() {
-  try { return localStorage.getItem(HQ_URL_KEY) || HQ_APPS_URL_DEFAULT; } catch (e) { return HQ_APPS_URL_DEFAULT; }
-}
-function hqSetUrl() {
-  const cur = hqAppsUrl();
-  const v = prompt('Paste the roster Apps Script Web App URL (ends with /exec).\nLeave empty to reset to default:', cur);
-  if (v === null) return;
-  try {
-    if (v.trim()) localStorage.setItem(HQ_URL_KEY, v.trim()); else localStorage.removeItem(HQ_URL_KEY);
-  } catch (e) {}
-  hqFetchData();
-}
-function hqSheetUrl() {
-  return 'https://docs.google.com/spreadsheets/d/' + HQ_SHEET_ID + '/gviz/tq?tqx=out:json&headers=1&gid=' + HQ_SHEET_GID;
-}
-
-function hqCacheSave(json) {
-  try { localStorage.setItem(HQ_CACHE_KEY, JSON.stringify({ t: Date.now(), json })); } catch (e) {}
-}
-function hqCacheLoad() {
-  try {
-    const o = JSON.parse(localStorage.getItem(HQ_CACHE_KEY) || 'null');
-    return (o && o.json && o.json.rows && o.json.rows.length) ? o : null;
-  } catch (e) { return null; }
-}
-
-async function hqFetchWithTimeout(url, ms) {
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), ms);
-  try { return await fetch(url, { signal: ctrl.signal, redirect: 'follow' }); }
-  finally { clearTimeout(timer); }
-}
-
-// Source 1: Apps Script web app → {cols, rows}
-async function hqLoadFromAppsScript() {
-  const res = await hqFetchWithTimeout(hqAppsUrl() + '?_=' + Date.now(), 20000);
-  if (!res.ok) throw new Error('HTTP ' + res.status);
-  const text = await res.text();
-  let json;
-  try { json = JSON.parse(text); }
-  catch (e) { throw new Error('did not return JSON (deployment access not "Anyone", or script error)'); }
-  if (json.error) throw new Error(json.error);
-  if (!json.rows || !json.rows.length) throw new Error('returned 0 rows');
-  return json;
-}
-
-// Convert a GViz response object → {cols, rows}
-function hqGvizToJson(g) {
-  if (g.status === 'error') {
-    throw new Error((g.errors && g.errors[0] && (g.errors[0].detailed_message || g.errors[0].message)) || 'sheet query error');
-  }
-  const table = g.table || {};
-  let cols = (table.cols || []).map(c => (c.label || '').trim());
-  let rawRows = table.rows || [];
-  if (cols.every(c => !c) && rawRows.length) {
-    cols = (rawRows[0].c || []).map((c, i) => String((c && c.v != null) ? c.v : ('Col' + (i + 1))).trim());
-    rawRows = rawRows.slice(1);
-  }
-  cols = cols.map((c, i) => c || ('Col' + (i + 1)));
-  const rows = rawRows.map(r => {
-    const o = {};
-    cols.forEach((name, i) => { const cell = r.c && r.c[i]; o[name] = (cell && cell.v != null) ? cell.v : ''; });
-    return o;
-  });
-  if (!rows.length) throw new Error('roster sheet has 0 rows');
-  return { cols, rows };
-}
-
-// Source 2: read the sheet with fetch() (needs sheet shared "Anyone with the link")
-async function hqLoadFromSheet() {
-  const res = await hqFetchWithTimeout(hqSheetUrl() + '&_=' + Date.now(), 20000);
-  if (!res.ok) throw new Error('HTTP ' + res.status);
-  const text = await res.text();
-  const a = text.indexOf('{'), b = text.lastIndexOf('}');
-  if (a === -1 || b === -1) throw new Error('sheet is not public');
-  let g;
-  try { g = JSON.parse(text.slice(a, b + 1)); } catch (e) { throw new Error('could not parse sheet response'); }
-  return hqGvizToJson(g);
-}
-
-// Source 3: same sheet via <script> tag (JSONP) — not affected by CORS/fetch blocking
-function hqLoadFromSheetJsonp() {
-  return new Promise((resolve, reject) => {
-    const cb = '__hqGviz' + Date.now();
-    const sc = document.createElement('script');
-    let done = false;
-    const cleanup = () => { done = true; clearTimeout(timer); try { delete window[cb]; } catch (e) { window[cb] = undefined; } sc.remove(); };
-    const timer = setTimeout(() => { if (!done) { cleanup(); reject(new Error('no valid response (sheet not public / not shared "Anyone with the link")')); } }, 12000);
-    window[cb] = g => { if (done) return; cleanup(); try { resolve(hqGvizToJson(g)); } catch (e) { reject(e); } };
-    sc.onerror = () => { if (!done) { cleanup(); reject(new Error('script blocked or network error')); } };
-    sc.src = hqSheetUrl().replace('out:json', 'out:json;responseHandler:' + cb) + '&_=' + Date.now();
-    document.head.appendChild(sc);
-  });
-}
-
-function hqPickFile() { document.getElementById('hqRosterFile').click(); }
-
-async function hqLoadFromFile(input) {
-  const file = input.files && input.files[0];
-  input.value = '';
-  if (!file) return;
-  try {
-    if (!window.XLSX) throw new Error('Excel library not loaded (check internet)');
-    const wb = XLSX.read(await file.arrayBuffer(), { type: 'array' });
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-    if (aoa.length < 2) throw new Error('file has no data rows');
-    const cols = aoa[0].map((c, i) => String(c).trim() || ('Col' + (i + 1)));
-    const rows = aoa.slice(1)
-      .filter(r => r.some(v => String(v).trim() !== ''))
-      .map(r => { const o = {}; cols.forEach((c, i) => o[c] = r[i] != null ? r[i] : ''); return o; });
-    const json = { cols, rows };
-    hqParseRaw(json);
-    hqFetched = true;
-    hqCacheSave(json);
-    hqHideBanner();
-    hqSetStatus('ok', hqAllCrew.length + ' crew loaded (file: ' + file.name + ')');
-  } catch (e) {
-    hqSetStatus('err', 'File load failed');
-    alert('Could not read roster file: ' + e.message);
-  }
-}
-
-function hqHideBanner() {
-  const b = document.getElementById('hqErrBanner');
-  if (b) { b.style.display = 'none'; b.innerHTML = ''; }
-}
-function hqShowBanner(errs, note) {
-  const b = document.getElementById('hqErrBanner');
-  if (!b) return;
-  b.innerHTML =
-    `<div style="color:var(--signal-red);font-weight:700;font-size:14px;margin-bottom:8px;">⚠️ Could not load crew roster ${note ? '— ' + esc(note) : ''}</div>
-     <div style="font-size:12px;color:#e6c3c8;font-family:'Courier New',monospace;line-height:1.8;">${errs.map(x => esc(x)).join('<br>')}</div>
-     <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-       <button class="hq-action-btn cyan" onclick="hqFetchData()">⟳ Retry</button>
-       <button class="hq-action-btn" onclick="hqPickFile()">📂 Load Roster File (.xlsx / .csv)</button>
-       <button class="hq-action-btn" onclick="hqSetUrl()">⚙ Set roster script URL</button>
-       <a class="hq-action-btn" style="text-decoration:none;" target="_blank" rel="noopener" href="${esc(hqAppsUrl())}">🔗 Test Apps Script link</a>
-       <a class="hq-action-btn" style="text-decoration:none;" target="_blank" rel="noopener" href="https://docs.google.com/spreadsheets/d/${HQ_SHEET_ID}/edit">🔗 Open roster sheet</a>
-     </div>`;
-  b.style.display = 'block';
-}
-
 async function hqFetchData() {
   hqSetStatus('spin', 'Fetching crew roster…');
-  hqHideBanner();
   document.getElementById('hqGrid').innerHTML =
-    '<div class="hq-empty" style="font-family:\'Courier New\',monospace;">⟳ Loading crew roster…</div>';
+    '<div class="hq-empty" style="font-family:\'Courier New\',monospace;">⟳ Loading from Google Sheet…</div>';
 
-  const errs = [];
-  let json = null, source = '';
-  const sources = [
-    ['Apps Script',        hqLoadFromAppsScript],
-    ['Google Sheet',       hqLoadFromSheet],
-    ['Google Sheet (alt)', hqLoadFromSheetJsonp],
-  ];
-  for (const [name, fn] of sources) {
-    try { json = await fn(); source = name; break; }
-    catch (e) { errs.push(name + ' → ' + (e.name === 'AbortError' ? 'timed out' : e.message)); }
+  const url = 'https://script.google.com/macros/s/AKfycbxIfH_Y2vqZsY9-qIk145JSIhQUYa9KbwxswMGG85M8sMj4v08JMmJndbm6HQUzG3qRpA/exec';
+  try {
+    const res  = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status + ' — ensure sheet is shared as Anyone with the link → Viewer');
+    const json = await res.json();
+    if (json.error) throw new Error(json.error);
+    hqParseRaw(json);
+    hqFetched = true;
+    hqSetStatus('ok', hqAllCrew.length + ' crew loaded · ' + new Date().toLocaleTimeString('en-IN'));
+  } catch(e) {
+    hqSetStatus('err', 'Fetch failed');
+    document.getElementById('hqGrid').innerHTML =
+      `<div class="hq-empty">
+        <div style="font-size:28px;margin-bottom:12px;">⚠️</div>
+        <div style="color:var(--signal-red);margin-bottom:10px;font-weight:700;font-size:14px;">Could not load crew roster.</div>
+        <div style="font-size:12px;color:var(--muted);font-family:'Courier New',monospace;margin-top:8px;">Error: ${esc(e.message)}</div>
+      </div>`;
   }
-
-  if (json) {
-    try {
-      hqParseRaw(json);
-      hqFetched = true;
-      hqCacheSave(json);
-      hqSetStatus('ok', hqAllCrew.length + ' crew loaded (' + source + ') · ' + new Date().toLocaleTimeString('en-IN'));
-      if (errs.length) console.warn('HQ roster: earlier sources failed.', errs);
-      return;
-    } catch (e) { errs.push('Parse → ' + e.message); }
-  }
-
-  const cached = hqCacheLoad();
-  if (cached) {
-    try {
-      hqParseRaw(cached.json);
-      hqFetched = true;
-      hqSetStatus('spin', hqAllCrew.length + ' crew (CACHED ' + new Date(cached.t).toLocaleString('en-IN') + ')');
-      hqShowBanner(errs, 'showing last saved roster');
-      return;
-    } catch (e) {}
-  }
-
-  hqSetStatus('err', 'Fetch failed');
-  hqShowBanner(errs, '');
-  document.getElementById('hqGrid').innerHTML =
-    '<div class="hq-empty">No roster loaded — see the red box above.</div>';
 }
 
 function hqParseRaw(json) {
